@@ -44,6 +44,7 @@ class Captain():
         #Autonomous pins from RC
         self.autonomousPin = mraa.Aio(1)  #The analog pin number for aux 1
         self.auxDivide = 50               #A good dividing line (in 1024 bit adc units) to determine between high and low switch)
+        self.backAutoDivide = 10          # If autnoumous pin value is this low, controller is off, so use autonomous
         self.currentlyAutonomous = False  #Default into manual on boot (so if in manual during startup we don't lose control)
 
         #Relay pins
@@ -288,7 +289,8 @@ class Captain():
         #TODO: might want to switch these- consider case when controller is turned off.  We want to default to autonomous, right?
         #rospy.loginfo('[captain debug]: aux 1 read is : ' + str(self.autonomousPin.read()))
         #Manual Mode
-        if (self.autonomousPin.read() < self.auxDivide):
+        r = self.autonomousPin.read()
+        if (r < self.auxDivide and r > self.backAutoDivide):
             #If we just switched modes
             if self.currentlyAutonomous == True:
                 rospy.loginfo('[captain] switching into manual mode')
