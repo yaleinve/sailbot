@@ -2,6 +2,29 @@
 Changelog for package test_tf2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.12 (2015-08-05)
+-------------------
+* add utilities to get yaw, pitch, roll and identity transform
+* provide more conversions between types
+  The previous conversion always assumed that it was converting a
+  non-message type to a non-message type. Now, one, both or none
+  can be a message or a non-message.
+* Contributors: Vincent Rabaud
+
+0.5.11 (2015-04-22)
+-------------------
+
+0.5.10 (2015-04-21)
+-------------------
+
+0.5.9 (2015-03-25)
+------------------
+
+0.5.8 (2015-03-17)
+------------------
+* remove useless Makefile files
+* Contributors: Vincent Rabaud
+
 0.5.7 (2014-12-23)
 ------------------
 

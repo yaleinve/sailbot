@@ -1503,6 +1503,10 @@ TEST(tf, getParent)
   children.push_back("f");
   parents.push_back("j");
 
+  // Issue #74.
+  children.push_back("/k");
+  parents.push_back("l");
+
   tf::Transformer mTR(true);
 
   for (uint64_t i = 0; i <  children.size(); i++)
@@ -1949,13 +1953,13 @@ TEST(tf, frameExists)
   mTR.setTransform(  StampedTransform (tf::Transform(qt1, tf::Vector3(0,0,0)), ros::Time().fromNSec(4000),  "/parent", "/b"));
 
 
-  /* Not applicable anymore with tf2
+
   // test with fully qualified name
   EXPECT_TRUE(mTR.frameExists("/b"));
   EXPECT_TRUE(mTR.frameExists("/parent"));
   EXPECT_FALSE(mTR.frameExists("/other"));
   EXPECT_FALSE(mTR.frameExists("/frame"));
-  */
+
 
   //Test with resolveping
   EXPECT_TRUE(mTR.frameExists("b"));
@@ -1967,13 +1971,13 @@ TEST(tf, frameExists)
   qt2.setRPY(1,1,0);
   mTR.setTransform(  StampedTransform (tf::Transform(qt2, tf::Vector3(0,0,0)), ros::Time().fromNSec(4000),  "/frame", "/other"));
 
-  /* Not applicable anymore with tf2
+
   // test with fully qualified name
   EXPECT_TRUE(mTR.frameExists("/b"));
   EXPECT_TRUE(mTR.frameExists("/parent"));
   EXPECT_TRUE(mTR.frameExists("/other"));
   EXPECT_TRUE(mTR.frameExists("/frame"));
-  */
+
   
   //Test with resolveping
   EXPECT_TRUE(mTR.frameExists("b"));

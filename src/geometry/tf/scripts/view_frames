@@ -38,10 +38,6 @@
 
 from __future__ import with_statement
 
-PKG = 'tf' # this package name
-
-import roslib; roslib.load_manifest(PKG) 
-
 import sys, time
 import os
 import string
@@ -61,7 +57,7 @@ def listen(duration):
     print "Listening to /tf for %f seconds"%duration
     time.sleep(duration)
     print "Done Listening"
-    return tf_listener.allFramesAsDot()
+    return tf_listener.allFramesAsDot(rospy.Time.now())
     
 
 def poll(node_name):

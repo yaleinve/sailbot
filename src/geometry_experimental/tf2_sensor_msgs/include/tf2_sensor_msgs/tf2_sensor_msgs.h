@@ -45,17 +45,21 @@ namespace tf2
 
 // method to extract timestamp from object
 template <>
+inline
 const ros::Time& getTimestamp(const sensor_msgs::PointCloud2& p) {return p.header.stamp;}
 
 // method to extract frame id from object
 template <>
+inline
 const std::string& getFrameId(const sensor_msgs::PointCloud2 &p) {return p.header.frame_id;}
 
 // this method needs to be implemented by client library developers
 template <>
+inline
 void doTransform(const sensor_msgs::PointCloud2 &p_in, sensor_msgs::PointCloud2 &p_out, const geometry_msgs::TransformStamped& t_in)
 {
   p_out = p_in;
+  p_out.header = t_in.header;
   Eigen::Transform<float,3,Eigen::Affine> t = Eigen::Translation3f(t_in.transform.translation.x, t_in.transform.translation.y,
                                                                    t_in.transform.translation.z) * Eigen::Quaternion<float>(
                                                                      t_in.transform.rotation.w, t_in.transform.rotation.x,
@@ -77,10 +81,12 @@ void doTransform(const sensor_msgs::PointCloud2 &p_in, sensor_msgs::PointCloud2 
     *z_out = point.z();
   }
 }
+inline
 sensor_msgs::PointCloud2 toMsg(const sensor_msgs::PointCloud2 &in)
 {
   return in;
 }
+inline
 void fromMsg(const sensor_msgs::PointCloud2 &msg, sensor_msgs::PointCloud2 &out)
 {
   out = msg;

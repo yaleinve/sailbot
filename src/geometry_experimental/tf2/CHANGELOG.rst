@@ -2,6 +2,39 @@
 Changelog for package tf2
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.12 (2015-08-05)
+-------------------
+* add utilities to get yaw, pitch, roll and identity transform
+* provide more conversions between types
+  The previous conversion always assumed that it was converting a
+  non-message type to a non-message type. Now, one, both or none
+  can be a message or a non-message.
+* Contributors: Vincent Rabaud
+
+0.5.11 (2015-04-22)
+-------------------
+
+0.5.10 (2015-04-21)
+-------------------
+* move lct_cache into function local memoryfor `#92 <https://github.com/ros/geometry_experimental/issues/92>`_
+* Clean up range checking. Re: `#92 <https://github.com/ros/geometry_experimental/issues/92>`_
+* Fixed chainToVector
+* release lock before possibly invoking user callbacks. Fixes `#91 <https://github.com/ros/geometry_experimental/issues/91>`_
+* Contributors: Jackie Kay, Tully Foote
+
+0.5.9 (2015-03-25)
+------------------
+* fixing edge case where two no frame id lookups matched in getLatestCommonTime
+* Contributors: Tully Foote
+
+0.5.8 (2015-03-17)
+------------------
+* change from default argument to overload to avoid linking issue `#84 <https://github.com/ros/geometry_experimental/issues/84>`_
+* remove useless Makefile files
+* Remove unused assignments in max/min functions
+* change _allFramesAsDot() -> _allFramesAsDot(double current_time)
+* Contributors: Jon Binney, Kei Okada, Tully Foote, Vincent Rabaud
+
 0.5.7 (2014-12-23)
 ------------------
 

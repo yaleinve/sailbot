@@ -2,6 +2,54 @@
 Changelog for package tf2_ros
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.12 (2015-08-05)
+-------------------
+* remove annoying gcc warning
+  This is because the roslog macro cannot have two arguments that are
+  formatting strings: we need to concatenate them first.
+* break canTransform loop only for non-tiny negative time deltas
+  (At least) with Python 2 ros.Time.now() is not necessarily monotonic
+  and one can experience negative time deltas (usually well below 1s)
+  on real hardware under full load. This check was originally introduced
+  to allow for backjumps with rosbag replays, and only there it makes sense.
+  So we'll add a small duration threshold to ignore backjumps due to
+  non-monotonic clocks.
+* Contributors: Vincent Rabaud, v4hn
+
+0.5.11 (2015-04-22)
+-------------------
+* do not short circuit waitForTransform timeout when running inside pytf. Fixes `#102 <https://github.com/ros/geometry_experimental/issues/102>`_
+  roscpp is not initialized inside pytf which means that ros::ok is not
+  valid. This was causing the timer to abort immediately.
+  This breaks support for pytf with respect to early breaking out of a loop re `#26 <https://github.com/ros/geometry_experimental/issues/26>`_.
+  This is conceptually broken in pytf, and is fixed in tf2_ros python implementation.
+  If you want this behavior I recommend switching to the tf2 python bindings.
+* inject timeout information into error string for canTransform with timeout
+* Contributors: Tully Foote
+
+0.5.10 (2015-04-21)
+-------------------
+* switch to use a shared lock with upgrade instead of only a unique lock. For `#91 <https://github.com/ros/geometry_experimental/issues/91>`_
+* Update message_filter.h
+* filters: fix unsupported old messages with frame_id starting with '/'
+* Enabled tf2 documentation
+* make sure the messages get processed before testing the effects. Fixes `#88 <https://github.com/ros/geometry_experimental/issues/88>`_
+* allowing to use message filters with PCL types
+* Contributors: Brice Rebsamen, Jackie Kay, Tully Foote, Vincent Rabaud, jmtatsch
+
+0.5.9 (2015-03-25)
+------------------
+* changed queue_size in Python transform boradcaster to match that in c++
+* Contributors: mrath
+
+0.5.8 (2015-03-17)
+------------------
+* fix deadlock `#79 <https://github.com/ros/geometry_experimental/issues/79>`_
+* break out of loop if ros is shutdown. Fixes `#26 <https://github.com/ros/geometry_experimental/issues/26>`_
+* remove useless Makefile files
+* Fix static broadcaster with rpy args
+* Contributors: Paul Bovbel, Tully Foote, Vincent Rabaud
+
 0.5.7 (2014-12-23)
 ------------------
 * Added 6 param transform again

@@ -2,6 +2,24 @@
 Changelog for package tf2_bullet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.12 (2015-08-05)
+-------------------
+
+0.5.11 (2015-04-22)
+-------------------
+
+0.5.10 (2015-04-21)
+-------------------
+
+0.5.9 (2015-03-25)
+------------------
+
+0.5.8 (2015-03-17)
+------------------
+* remove useless Makefile files
+* fix ODR violations
+* Contributors: Vincent Rabaud
+
 0.5.7 (2014-12-23)
 ------------------
 * fixing install rules and adding backwards compatible include with #warning

@@ -2,6 +2,30 @@
 Changelog for package tf2_geometry_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.5.12 (2015-08-05)
+-------------------
+* Merge pull request `#112 <https://github.com/ros/geometry_experimental/issues/112>`_ from vrabaud/getYaw
+  Get yaw
+* add toMsg and fromMsg for QuaternionStamped
+* Contributors: Tully Foote, Vincent Rabaud
+
+0.5.11 (2015-04-22)
+-------------------
+
+0.5.10 (2015-04-21)
+-------------------
+
+0.5.9 (2015-03-25)
+------------------
+
+0.5.8 (2015-03-17)
+------------------
+* remove useless Makefile files
+* tf2 optimizations
+* add conversions of type between tf2 and geometry_msgs
+* fix ODR violations
+* Contributors: Vincent Rabaud
+
 0.5.7 (2014-12-23)
 ------------------
 * fixing transitive dependency for kdl. Fixes `#53 <https://github.com/ros/geometry_experimental/issues/53>`_

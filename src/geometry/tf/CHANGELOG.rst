@@ -2,6 +2,34 @@
 Changelog for package tf
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.11.7 (2015-04-21)
+-------------------
+* add a unit test for pytf wait_for_transform
+* removed msg serv installation from cmakelists
+* generated autodoc
+* Fixed Vector3 documentation
+* display RPY in both radian and degree
+* Fixed command line arguments
+* using TimeStamp and FrameId in message filter
+  this allows to use tf::MessageFilter with pcl::PointCloud<T>
+  see `#55 <https://github.com/ros/geometry/issues/55>`_
+* Added and optional third argument to specify publishing frequency
+* Contributors: Adnan Munawar, Brice Rebsamen, Jackie Kay, Tully Foote, Ying Lu
+
+1.11.6 (2015-03-25)
+-------------------
+* reenable python tests
+* Broadcaster: Rospy fix `#84 <https://github.com/ros/geometry/issues/84>`_. Add sendTransformMessage.
+* Contributors: Tully Foote, lsouchet
+
+1.11.5 (2015-03-17)
+-------------------
+* Strip leading slash get parent `#79 <https://github.com/ros/geometry/issues/79>`_ 
+* Make frameExists strip leading slash going into tf2.`#63 <https://github.com/ros/geometry/issues/63>`_
+* Update broadcaster.py,  Added ability to use TransformStamped
+* update view_frames to use AllFramesAsDot(rospy.time.now()) `#77 <https://github.com/ros/geometry/issues/77>`_
+* Contributors: David Lu!!, Gaël Ecorchard, Kei Okada, Tully Foote
+
 1.11.4 (2014-12-23)
 -------------------
 * Install static lib and remove test for Android

@@ -11,8 +11,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import roslib
-roslib.load_manifest('tf_conversions')
 import sys, os
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -199,8 +197,7 @@ latex_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
     'http://docs.python.org/': None,
-    'http://opencv.willowgarage.com/documentation/': None,
-    'http://opencv.willowgarage.com/documentation/python/': None,
+    'http://docs.opencv.org/3.0-last-rst/': None,
     'http://www.ros.org/doc/api/tf/html/python/' : None,
     'http://docs.scipy.org/doc/numpy' : None,
     'http://www.ros.org/doc/api/kdl/html/python/' : None

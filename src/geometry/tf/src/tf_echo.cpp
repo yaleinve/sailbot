@@ -31,6 +31,7 @@
 #include "tf/transform_listener.h"
 #include "ros/ros.h"
 
+#define _USE_MATH_DEFINES
 class echoListener
 {
 public:
@@ -58,21 +59,31 @@ int main(int argc, char ** argv)
   //Initialize ROS
   ros::init(argc, argv, "tf_echo", ros::init_options::AnonymousName);
 
-  if (argc != 3)
+  // Allow 2 or 3 command line arguments
+  if (argc < 3 || argc > 4)
   {
-    printf("Usage: tf_echo source_frame target_frame\n\n");
+    printf("Usage: tf_echo source_frame target_frame [echo_rate]\n\n");
     printf("This will echo the transform from the coordinate frame of the source_frame\n");
     printf("to the coordinate frame of the target_frame. \n");
     printf("Note: This is the transform to get data from target_frame into the source_frame.\n");
+    printf("Default echo rate is 1 if echo_rate is not given.\n");
     return -1;
   }
 
   ros::NodeHandle nh;
 
-  // read rate parameter
-  ros::NodeHandle p_nh("~");
   double rate_hz;
-  p_nh.param("rate", rate_hz, 1.0);
+  if (argc == 4)
+  {
+    // read rate from command line
+    rate_hz = atof(argv[3]);
+  }
+  else
+  {
+    // read rate parameter
+    ros::NodeHandle p_nh("~");
+    p_nh.param("rate", rate_hz, 1.0);
+  }
   ros::Rate rate(rate_hz);
 
   //Instantiate a local listener
@@ -104,7 +115,8 @@ int main(int argc, char ** argv)
         std::cout << "- Translation: [" << v.getX() << ", " << v.getY() << ", " << v.getZ() << "]" << std::endl;
         std::cout << "- Rotation: in Quaternion [" << q.getX() << ", " << q.getY() << ", " 
                   << q.getZ() << ", " << q.getW() << "]" << std::endl
-                  << "            in RPY [" <<  roll << ", " << pitch << ", " << yaw << "]" << std::endl;
+                  << "            in RPY (radian) [" <<  roll << ", " << pitch << ", " << yaw << "]" << std::endl
+                  << "            in RPY (degree) [" <<  roll*180.0/M_PI << ", " << pitch*180.0/M_PI << ", " << yaw*180.0/M_PI << "]" << std::endl;
 
         //print transform
       }

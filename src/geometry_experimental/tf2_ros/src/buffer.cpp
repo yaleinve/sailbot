@@ -33,6 +33,7 @@
 #include "tf2_ros/buffer.h"
 
 #include <ros/assert.h>
+#include <sstream>
 
 namespace tf2_ros
 {
@@ -49,7 +50,7 @@ Buffer::Buffer(ros::Duration cache_time, bool debug) :
 
 geometry_msgs::TransformStamped 
 Buffer::lookupTransform(const std::string& target_frame, const std::string& source_frame,
-			const ros::Time& time, const ros::Duration timeout) const
+                        const ros::Time& time, const ros::Duration timeout) const
 {
   canTransform(target_frame, source_frame, time, timeout);
   return lookupTransform(target_frame, source_frame, time);
@@ -58,8 +59,8 @@ Buffer::lookupTransform(const std::string& target_frame, const std::string& sour
 
 geometry_msgs::TransformStamped 
 Buffer::lookupTransform(const std::string& target_frame, const ros::Time& target_time,
-			const std::string& source_frame, const ros::Time& source_time,
-			const std::string& fixed_frame, const ros::Duration timeout) const
+                        const std::string& source_frame, const ros::Time& source_time,
+                        const std::string& fixed_frame, const ros::Duration timeout) const
 {
   canTransform(target_frame, target_time, source_frame, source_time, fixed_frame, timeout);
   return lookupTransform(target_frame, target_time, source_frame, source_time, fixed_frame);
@@ -100,9 +101,21 @@ void sleep_fallback_to_wall(const ros::Duration& d)
   }
 }
 
+void conditionally_append_timeout_info(std::string * errstr, const ros::Time& start_time,
+                                       const ros::Duration& timeout)
+{
+  if (errstr)
+  {
+    std::stringstream ss;
+    ss << ". canTransform returned after "<< (now_fallback_to_wall() - start_time).toSec() \
+       <<" timeout was " << timeout.toSec() << ".";
+    (*errstr) += ss.str();
+  }
+}
+
 bool
 Buffer::canTransform(const std::string& target_frame, const std::string& source_frame, 
-		     const ros::Time& time, const ros::Duration timeout, std::string* errstr) const
+                     const ros::Time& time, const ros::Duration timeout, std::string* errstr) const
 {
   if (!checkAndErrorDedicatedThreadPresent(errstr))
     return false;
@@ -110,17 +123,22 @@ Buffer::canTransform(const std::string& target_frame, const std::string& source_
   // poll for transform if timeout is set
   ros::Time start_time = now_fallback_to_wall();
   while (now_fallback_to_wall() < start_time + timeout && 
-	 !canTransform(target_frame, source_frame, time) &&
-         now_fallback_to_wall() >= start_time) //don't wait if time jumped backwards
-    sleep_fallback_to_wall(ros::Duration(0.01));
-  return canTransform(target_frame, source_frame, time, errstr);
+         !canTransform(target_frame, source_frame, time) &&
+         (now_fallback_to_wall()+ros::Duration(3.0) >= start_time) &&  //don't wait when we detect a bag loop
+         (ros::ok() || !ros::isInitialized())) // Make sure we haven't been stopped (won't work for pytf)
+    {
+      sleep_fallback_to_wall(ros::Duration(0.01));
+    }
+  bool retval = canTransform(target_frame, source_frame, time, errstr);
+  conditionally_append_timeout_info(errstr, start_time, timeout);
+  return retval;
 }
 
     
 bool
 Buffer::canTransform(const std::string& target_frame, const ros::Time& target_time,
-		     const std::string& source_frame, const ros::Time& source_time,
-		     const std::string& fixed_frame, const ros::Duration timeout, std::string* errstr) const
+                     const std::string& source_frame, const ros::Time& source_time,
+                     const std::string& fixed_frame, const ros::Duration timeout, std::string* errstr) const
 {
   if (!checkAndErrorDedicatedThreadPresent(errstr))
     return false;
@@ -128,10 +146,15 @@ Buffer::canTransform(const std::string& target_frame, const ros::Time& target_ti
   // poll for transform if timeout is set
   ros::Time start_time = now_fallback_to_wall();
   while (now_fallback_to_wall() < start_time + timeout && 
-	 !canTransform(target_frame, target_time, source_frame, source_time, fixed_frame) &&
-         now_fallback_to_wall() >= start_time) //don't wait if time jumped backwards
-    sleep_fallback_to_wall(ros::Duration(0.01));
-  return canTransform(target_frame, target_time, source_frame, source_time, fixed_frame, errstr);
+         !canTransform(target_frame, target_time, source_frame, source_time, fixed_frame) &&
+         (now_fallback_to_wall()+ros::Duration(3.0) >= start_time) &&  //don't wait when we detect a bag loop
+         (ros::ok() || !ros::isInitialized())) // Make sure we haven't been stopped (won't work for pytf)
+         {  
+           sleep_fallback_to_wall(ros::Duration(0.01));
+         }
+  bool retval = canTransform(target_frame, target_time, source_frame, source_time, fixed_frame, errstr);
+  conditionally_append_timeout_info(errstr, start_time, timeout);
+  return retval; 
 }
 
 

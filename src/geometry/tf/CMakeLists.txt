@@ -130,15 +130,12 @@ find_package(PythonLibs REQUIRED)
 set_target_properties(pytf_py PROPERTIES OUTPUT_NAME tf PREFIX "_" SUFFIX ".so"
   LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${PYTHON_INSTALL_DIR}/tf)
 
-# target_link_libraries(pytf_py ${PROJECT_NAME})
-# add_compile_flags(pytf_py -g -Wno-missing-field-initializers)
-#add_compile_flags(pytf_py ${SSE_FLAGS}) #conditionally adds sse flags if available
-# add_pyunit(test/testPython.py) 
-# DOES PYUNIT WORK IN CATKIN?
+
 target_link_libraries(pytf_py ${Boost_LIBRARIES} ${catkin_LIBRARIES})
 endif()
 
 if(CATKIN_ENABLE_TESTING AND NOT ANDROID)
+catkin_add_nosetests(test/testPython.py) 
 add_executable(tf_speed_test EXCLUDE_FROM_ALL test/speed_test.cpp)
 target_link_libraries(tf_speed_test ${PROJECT_NAME})
 endif()
@@ -164,17 +161,6 @@ install(PROGRAMS
   scripts/view_frames
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION} )
 
-# Need to install python msg and srv directories manually because genmsg
-# specifically avoids installing python message code if catkin_python_setup()
-# has been used.  See https://github.com/ros/genmsg/issues/10
-install(DIRECTORY ${CATKIN_DEVEL_PREFIX}/${PYTHON_INSTALL_DIR}/tf/msg
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/tf)
-install(DIRECTORY ${CATKIN_DEVEL_PREFIX}/${PYTHON_INSTALL_DIR}/tf/srv
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/${PYTHON_INSTALL_DIR}/tf)
-
-
 if(TARGET tests)
   add_dependencies(tests testBroadcaster testListener transform_listener_unittest test_message_filter )
 endif()
-
-
