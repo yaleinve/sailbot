@@ -80,6 +80,6 @@ if __name__ == '__main__':
 
         while True:
             am.update_data() # Get the latest data from the airmar
-            time.sleep(1)
+#            time.sleep(1)
     except Exception as e:
         print e
