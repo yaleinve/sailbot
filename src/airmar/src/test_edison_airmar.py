@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #A non-ros runner to test edison serial
 
-
+import mraa
 import random
 import math
 import serial
@@ -25,6 +25,10 @@ class Airmar:
 
         # we need to change this port to whatever it's going to be for the
         # actual machine we run ROS on 
+        
+        #Turn pins 0 and 1 on to uart so we can actually use them
+        mraa.Uart(0)
+        #...but, mraa is a bitch, after they're turned on let's just use pyserial library instead ;)
         self.ser = serial.Serial('/dev/ttyMFD1', 4800, timeout=1)
         self.ser.readline()
 
