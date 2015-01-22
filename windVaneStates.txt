@@ -1,0 +1,21 @@
+
+Wind Vane states:
+.767 - .768 = 0 degrees  North
+.395 - .396 = 22.5 degrees  North North East
+.449 - .450 = 45 degrees North East
+.080 - .082 = 67.5 degrees East North East
+.088 - .091 = 90 degrees East
+.062 - .063 = 112.5 degrees East South East
+.178 - 1.80 = 145 degrees South East
+.122 - .123 = 167.5 degrees South South East
+.280 - .281 = 180 degrees South 
+.237 - .239 = 202.5 degrees South South West
+.614 - .616 = 225 degrees South West
+.584 - .587 = 247.5 degrees West South West
+.921 - .924 = 270 degrees West
+.806 - .808 = 292.5 degrees West North West
+.864 - .877 = 315 degrees North West
+.685 - .687 = 337.5 degrees North North West
+
+
+
