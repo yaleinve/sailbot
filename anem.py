@@ -1,16 +1,26 @@
-import Adafruit_BBIO.GPio as GPIO
+import Adafruit_BBIO.GPIO as GPIO
 import time
 
-t = time.time()
-highCount = 0   # number of high voltages / sec (HZ)
+'''
+def onRisingEdge(channel):
+   print("rising edge!")
+   #print("time between leading edge: %f miliseconds.", t - time.time())
+
+
+GPIO.setup("P8_07", GPIO.IN)
+GPIO.add_event_detect("P8_07", GPIO.RISING, callback = onRisingEdge)
+while(1):
+    t = time.time()
+    #GPIO.wait_for_edge("P8_07", GPIO.RISING)
+    time.sleep(20)
+   ''' 
+
+  
+
 GPIO.setup("P8_07", GPIO.IN)
 
-
 while(1):
-  if time.time() - t >= 1:
-      print highCount
-      highCount = 0
-      t = time.time()
-
-  elif(GPIO.input("P8_07")):
-      	highCount += 1 
+  if GPIO.input("P8_07"):
+    print("High")
+  else:
+    print("Low")

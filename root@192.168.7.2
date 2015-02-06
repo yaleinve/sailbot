@@ -1,0 +1,12 @@
+import Adafruit_BBIO.GPio as GPIO
+import time
+
+
+GPIO.setup("P8_07", GPIO.IN)
+
+while(1):
+    t = time.time()
+    GPIO.add_event_detect("P8_07", GPIO.RISING)
+
+    if GPIO.event_detected("P8_07"):
+      print("time between leading edge: %f miliseconds.", t - time.time())
