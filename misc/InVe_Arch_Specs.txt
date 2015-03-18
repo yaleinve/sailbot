@@ -37,7 +37,7 @@ True Wind: the wind felt when not moving relative to the Earth
 
 Apparent Wind: the wind felt when moving relative to the Earth
 
-Course: a) The intended direction of travel of the boat, measured as a compass direction b) The area of water in which sailing will occur (i.e. the racecourse)
+Course: a) The intended direction of travel of the boat, measured as a compass direction b) The area of water in which sailing will occur (i.e. the racecourse)  Course Over Ground, or COG, is the compass heading of the boat as determined by the derivative of gps coordinates
 
 (Absolute) Bearing: the compass direction from your current position to a specific target (From New Haven, NYC's bearing ~ 270deg)
 
@@ -79,16 +79,20 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
 	- Nodes: Helm, Trim
 
 3) List of Topics (~~sensor data topics may be incorrectly named here)
-   - vectornavData //The formatted data from the vectornav
+   - vectornavData //The formatted data from the vectornav ~~~MAYBE DON'T INCLUDE AT ALL IF AIRMAR HAS ENOUGH ROLL DATA
       yaw: ~
       pitch: ~
       roll: ~
    - airmarData    // " " " " " " airmar
-   		windspeed: double
-   		windDir: int
-   - gpsCur		   //The formatted gps location.  This topic will probably be
-		  lat: ~?    //implemented as a part of vectornavData or airmarData
-		  long: ~?
+   		apWndSpd: double
+   		apWndDir: double 
+                truWndSpd: double
+                truWndDir: double
+                amrRoll: double //For later comparison to vectornav roll, but at top of mast so may be noisy
+		lat: ~? 
+		long: ~?
+		cog: double   //Course over ground
+                sog: double   //Speed over ground
    - rudderPos	   //The current rudder position (can overwrite to move rudder)
    		angle: int   //angle should range from [-RUDDERMAX,RUDDERMAX]
    - sailPos	     // " " jib and main position (" " " " sails)
@@ -101,16 +105,12 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    - manualMode         //Whether or not manual control is being used
         manual: bool
    - speedStats 	    //The current speed, VMG,XTE,VMG upwind/downwind
-   		speed: double
    		VMG: double
    		VMGup: double
    		XTE: double
-   - trueWind			//The current true wind speed and direction 
-        speed:double
-        direction:int
    - targetCourse  		//The long-term course goal as a compass direction and 
-   		course: double	//range
-   		range: double
+   	course: double	//range
+   	range: double
    - targetHeading		//The target heading for the helmsman to steer to.
         heading:int 	
         state: enum
@@ -123,10 +123,11 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
 4) Node Specifications
 
 a) Capn
-   Subscriptions: gpsCur, manualMode, competitionInfo
+   Subscriptions: airmarData, manualMode, competitionInfo
    Publications:  legInfo
 
-   Description: Determines the leg that the Bot should sail.
+   Description: Determines the leg that the Bot should sail.  If the previous leg is completed (also determined by capn, based on cartesian distance
+to end of leg + fidelity of gps), publishes the next leg
    If manual mode is enabled, disables all high-level ROS nodes except for Trim.  ~~Basic data collection can also be disabled(?).
 
    If manual mode is disabled, enables all high-level ROS nodes (if they weren't on already) and determine the first leg (written to legInfo) using competitionInfo as such:
@@ -139,7 +140,7 @@ a) Capn
    		later date.
 
 b) Nav
-   Subscriptions: gpsCur, legInfo
+   Subscriptions: airmarData, legInfo
    Publications: targetCourse
 
    Description: Publishes to targetCourse a global course (compass heading) and distance to the target from the current position given legInfo.end .  Can run at 1Hz or slower, especially when very far from target location.
@@ -151,20 +152,15 @@ b) Nav
 
 c) SpeedCalc
 
-   Subscriptions: targetCourse, legInfo, gpsCur, airmarData
-   Publications:  speedStats, trueWind
+   Subscriptions: targetCourse, legInfo, airmarData
+   Publications:  speedStats 
 
-   Description: Publishes useful speed derivatives to speedStats.  Publishes useful wind information to trueWind.
+   Description: Publishes useful speed derivatives to speedStats.  
 
    Statistics to be calculated and published include:
 
-   Boatspeed: Displacement to be calculated from gps for first iteration although may later involve corroboration with the vectornav. 
-
    VMG (to waypoint): The component of the velocity in the direction of targetCourse.course .
 
-   True Wind Speed/Direction (to be published to trueWind topic): Use vector 
-     subtraction to remove the component of forward motion from the airmar's windspeed/direction readings and return the new wind vector  This is essentially accounting for the 'convertible effect' where you feel wind coming from straight ahead when you move forward.
-   	
    VMG upwind: Calculate the component of velocity in the wind direction of the true wind (n.b. if wind blows North to South, moving North at speed x results in VMGup of x, NOT -x)
 
    XTE:  The shortest distance from the current position to the line connecting the beginning and end points of the leg as stored in legInfo.  This number is useful to enforce tacking at certain points when sailing upwind. Define XTE as negative when the position of the boat is 
@@ -173,7 +169,7 @@ d) Tactics
 
    DON'T FORGET: All compass arithmetic is done mod 360!!!
 
-   Subscriptions: targetCourse, trueWind, speedStats
+   Subscriptions: targetCourse, airmarData, speedStats
    Publications: targetHeading
 
    Description:
@@ -199,12 +195,16 @@ e) Helm
    (Later Iterations): given targetHeading state, use ML/optimization to maximize either VMGup (BEATING), -(VMGup) (RUNNING), or VMG (REACHING)
 
 f) Trim
-   Subscriptions: vectornavData, airmarData
+   Subscriptions: vectornavData(?), airmarData
    Publications: sailPos
 
    Description: Based off of apparent wind angle (from or derived from airmar) and apparent wind speed, output main and jib sail positions.
    Implement Capsize Prevention: if vectornav.roll > CAPSIZE_TOL then release sails.
 
-   First Iteration: Use quantized sail positions, perhaps 10 of them for the entire range.  Empirically determine good values.
+   First Iteration: Use quantized sail positions, perhaps 10 of them for the entire range.  Empirically determine good values. Trim does not listen to helm at all (steering is done only with rudde)
 
-   Later Iterations: Use ML/optimization to achieve optimal sail trim for a given apparent wind angle/windspeed.
+   One Improvement: Use ML/optimization to achieve optimal sail trim for a given apparent wind angle/windspeed.
+
+   Another Improvement: Trim listens to Helm saying (I'm trying to head up/down) and adjusts its optimal output accordingly to create desireable helm imbalance
+
+   Another Improvement: Trim and Helm converse about tradeoff between rudder correction and helme correction for straight course to optimize SOG
