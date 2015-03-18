@@ -1,4 +1,4 @@
-from math import radians, cos, sin, asin, sqrt
+from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
 #returns the distance in km between two gps coordinates.
 def gpsDistance(lat1, lon1, lat2, lon2):
@@ -19,6 +19,18 @@ def gpsDistance(lat1, lon1, lat2, lon2):
     return c * r
 
 
+def gpsBearing(lat1, lon1, lat2, lon2):
+  dlon = lon2 - lon1
+  y = sin(dlon) * cos(lat2)
+  x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
+  d = degrees(atan2(y, x))
+
+  #ensure that d is between 0 and 360
+  while(not ((d >= 0) and (d <= 360))):
+    d += 360 * (d < 0) 
+    
+  return (d)
+
 while True:
   lat1 = float(input("lat1 : "))
   lon1 = float(input("lon1 : "))
@@ -26,3 +38,4 @@ while True:
   lon2 = float(input("lon2 : "))
 
   print(gpsDistance(lat1, lon1, lat2, lon2))
+  print(gpsBearing(lat1, lon1, lat2, lon2))

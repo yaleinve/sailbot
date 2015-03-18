@@ -24,7 +24,6 @@ def windvane():
     orientation_val = 0
     orientation_string = ""
 
-
     if(abs(value - 0.077) < epsilon):
       orientation_val = abs(value - 0.077)
       orientation_string = "West : ~ 270 degrees bearing"

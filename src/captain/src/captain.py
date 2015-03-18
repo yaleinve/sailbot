@@ -55,8 +55,8 @@ def airmar_callback(data):
   
 def competition_info_callback(data):
   #need clarification with spec (what is gpsTarg1 and gpsTarg2?)
-  #global goal_lat = data.
-  #global goal_long = data.
+  global goal_lat = data.gpsTarg1Lat
+  global goal_long = data.gpsTarg1Long
 
 def manual_callback(data):
   global isManual = data.data #the boolan that describes if we are in autonomous or in manual mode.
