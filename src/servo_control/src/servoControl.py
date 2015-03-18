@@ -23,7 +23,7 @@ def rotate(angle):
     winch_target = 15.00         #Servo jitters if target is out of physical range.  Must correct
   elif winch_target > 178.00:
     winch_target = 178.0
-dafruit_BBIO.PWM as PWM
+
   winch_duty = 100 - ((winch_target / 180) * duty_span + duty_min)
   PWM.set_duty_cycle(winch_servo_pin, winch_duty)
 
