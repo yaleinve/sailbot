@@ -51,9 +51,11 @@ def publish_navigator():
 
   pub_course.publish(target_course)
 
+
 def airmar_callback(data):
   global begin_lat = data.lat
   global begin_long = data.long
+  publish_navigator()
 
 def leg_info_callback(data):
   global end_lat = data.end_lat
@@ -64,9 +66,9 @@ def listener():
   rospy.Subscriber("airmarData", AirmarData, airmar_callback)
   rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
   
-  publish_navigator()
-  rospy.spin() 
+  rospy.spin()
 
 
 if __name__ == "__main__":
+
   listener()

@@ -21,6 +21,7 @@ truWndDir = 0.0
 goal_lat = 0.0
 goal_long = 0.0
 
+timeSinceLastPublish = 0.0
 
 isManual = False
 
@@ -52,14 +53,20 @@ def airmar_callback(data):
   global apWndDir = data.apWndDir
   global truWndSpd = data.truWndSpd
   global truWndDir = data.truWndDir
+
+  if((time.time() - timeSinceLastPublish) >= 10.0):
+    publish_captain()
+    global timeSinceLastPublish = time.time()
   
 def competition_info_callback(data):
   #need clarification with spec (what is gpsTarg1 and gpsTarg2?)
+  #this message is also going to be sent through a rostopic pub when we kick off the software.
   global goal_lat = data.gpsTarg1Lat
   global goal_long = data.gpsTarg1Long
+  publish_captain()
 
 def manual_callback(data):
-  global isManual = data.data #the boolan that describes if we are in autonomous or in manual mode.
+  global isManual = data.data #the boolean that describes if we are in autonomous or in manual mode.
 
 
 def listener():
@@ -67,7 +74,7 @@ def listener():
   rospy.Subscriber("airmarData", AirmarData, airmar_callback)
   rospy.Subscriber("competitionInfo", CompetitionInfo, competition_info_callback)
   rospy.Subscriber("manualMode", Bool, manual_callback)
-  publish_captain()
+
   rospy.spin() 
 
 if __name__ == "__main__":
