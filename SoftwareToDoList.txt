@@ -1,0 +1,26 @@
+SoftwareToDoList.txt 			Eric Anderson Mar 15
+(This file is meant to serve as an updatable list of open projects
+for InVe's software team.  Feel free to update as appropriate)
+
+Write guidelines for EE cape
+
+Write Airmar driver node to publish to airmar.msg
+
+Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
+  Captain:  Needs fleshing out for leg sequencing, various competition modes 
+  Navigator: Almost done- Andrew
+  Tactics: Not Started
+  SpeedStats: Almost done- Andrew
+  Helm: Waiting for Ratchet to be built
+  Trim: " " " "
+
+Write Ratchet Servo Driver Node (for all three servos on board- main,jib,rudder)
+
+Implement/Research "Snapshot" functionality where, when sailing under RC control, we
+can capture all data and servo positions (that way we can manually tune and remember
+good setups with balanced helm)
+
+Test all high level software by walking around with BBB/Laptop and having it lead us around.
+
+Per Alex's suggestion: Hook up high level nodes to Armstrong and have Armstrong drive a
+course?

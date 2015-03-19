@@ -1,0 +1,30 @@
+Hi EE,
+
+Here are a list of ideas that we would love for you to implement on the final cape.
+As software people, we probably will be playing a lot with your creations and don't
+want to break anything.
+
+- Please spec EVERYTHING in a digital form (ideally doc or text file).  We want to put
+this on the github so that software people can reference it.  Talk to someone on the team 
+if you don't know git and they will help you.
+
+- Please make plugs that only plug in one way.  If we can put the plug in backwards, we will.
+And sometimes that causes problems.
+
+- Please DO NOT assume we know/are capable of tracing wires on the cape or even really reading
+anything on the cape that you have not labeled.  Also, any connection that may ever require
+a multimeter to double-check how to connect things is way too hard for us.
+
+- Wire color conventions would be useful if they were religiously followed but not if they
+are only sporadically followed.  Please document conventions in the spec for us.
+
+CAPE NEEDS: from the software side, it would be great to have clear, idiot-proof connections
+for:
+All three servos
+Power
+The manual channel coming from the RC receiver
+The 3 servo channels coming from the RC receiver (THIS IS DIFFERENT THAN WHAT ERIC TOLD MATT)
+The Airmar
+The Vectornav
+The Router
+etc
