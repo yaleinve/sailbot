@@ -32,7 +32,6 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   y = sin(dlon) * cos(lat2)
   x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
   d = degrees(atan2(y, x))
-
   #ensure that d is between 0 and 360
   while(not ((d >= 0) and (d <= 360))):
     d += 360 * (d < 0) 

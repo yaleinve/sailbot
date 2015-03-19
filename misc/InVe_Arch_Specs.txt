@@ -117,12 +117,13 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    - legInfo	   		//The gps coordinates of starting and ending points of 
    	    begin: (lat,long) the current leg, and the max/min permissable XTE
    	    end: (lat,long)
+        leg_course: double    //used in speed_calculator for determining XTE.
    	    XTE_MIN: double
    	    XTE_MAX: double
 
 4) Node Specifications
 
-a) Capn
+a) captain
    Subscriptions: airmarData, manualMode, competitionInfo
    Publications:  legInfo
 
@@ -139,7 +140,7 @@ to end of leg + fidelity of gps), publishes the next leg
    StationKeeping mode: To be implemented at end, algorithm to be discussed at 
    		later date.
 
-b) Nav
+b) navigator
    Subscriptions: airmarData, legInfo
    Publications: targetCourse
 
@@ -150,7 +151,7 @@ b) Nav
    When the boat is very far from its target, the course and range will not change quickly.  Therefore, the node can run at few cycles than when the boat is nearby the target.  This only needs to be implemented if the entire
    architecture runs too slowly (DO NOT IMPLEMENT IT IMMEDIATELY!)
 
-c) SpeedCalc
+c) speed_calculator
 
    Subscriptions: targetCourse, legInfo, airmarData
    Publications:  speedStats 
@@ -165,7 +166,7 @@ c) SpeedCalc
 
    XTE:  The shortest distance from the current position to the line connecting the beginning and end points of the leg as stored in legInfo.  This number is useful to enforce tacking at certain points when sailing upwind. Define XTE as negative when the position of the boat is 
 
-d) Tactics
+d) tactics
 
    DON'T FORGET: All compass arithmetic is done mod 360!!!
 
@@ -186,7 +187,7 @@ d) Tactics
    - Implement adjustment for set/drift, especially if traveling across the wind.
    - Implement ML to choose best upwind/downwind heading
 
-e) Helm
+e) helm
    Subscriptions: airmarData, targetHeading, (later: speedStats?)
    Publications: rudderPos
 
@@ -194,7 +195,7 @@ e) Helm
    
    (Later Iterations): given targetHeading state, use ML/optimization to maximize either VMGup (BEATING), -(VMGup) (RUNNING), or VMG (REACHING)
 
-f) Trim
+f) trim
    Subscriptions: vectornavData(?), airmarData
    Publications: sailPos
 

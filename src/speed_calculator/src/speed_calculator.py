@@ -7,7 +7,7 @@ from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
 from navigator.msg import TargetCourse
 from captain.msg import LegInfo
-from airmar.msg import AirmarData #TODO not yet implemented.
+from airmar.msg import AirmarData 
 from speed_calculator.msg import SpeedStats
 
 
@@ -18,25 +18,15 @@ twind_dir = 0.0
 lat = 0.0
 lon = 0.0
 
-#target_course variables to be used in calculating XTE(TODO)
-target_range = 0.0
+#target_course variables to be used in calculating XTE
 target_course = 0.0
 
-#returns the vmg torward the target in the units that were passed into it.
-#course is the bearing direction of the vector that we are trying to find the
-#component of our velocity to. (can either be the course on the rhumbline or the direction
-#of the true wind.)
-def calc_vmg(sog, cog, course):
-  return(cos(cog - course) * sog)
+leg_course = 0.0
 
 
-#======TODO============#
-#not really sure how you would be able to find the correct gps point on the target course
-#vector. Mathematically simple with points, but a bit confusing with gps points.
-def calc_xte(lat, lon, trg_range, trg_course):
-  return 0;
-#======================#
-
+#returns the scalar projection of the vector (magnitude direction) onto course.
+def calc_scalar(magnitude, direction, course):
+  return(cos(direction - course) * magnitude)
 
 def publish_speed_stats():
   rospy.init_node("speed_calculator")
@@ -44,16 +34,18 @@ def publish_speed_stats():
     
   speed_stats = SpeedStats()
 
-  speed_stats.VMG = calc_vmg(sog, cog, target_course)
-  speeD_stats.VMGup = calc_vmg(sog, cog, twind_dir)
-  speed_stats.XTE = calc_xte(lat, lon, target_range, target_course)
+  speed_stats.VMG = calc_scalar(sog, cog, target_course)
+  speeD_stats.VMGup = calc_scalar(sog, cog, twind_dir)
+  speed_stats.XTE = calc_scalar(target_range, target_course, leg_course)
 
   pub_stats.publish(speed_stats)
+
+def leg_info_callback(data):
+  global leg_course = data.leg_course
 
 def target_course_callback(data):
   global target_course = data.course
   global target_range = data.range
-  publish_speed_stats()
 
 #assuming for now that cog and sog are in knots.
 def airmar_callback(data):
