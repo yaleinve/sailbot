@@ -30,6 +30,7 @@ timeSinceLastPublish = 0.0
 isManual = False
 
 #returns the distance in m between two gps coordinates.
+#Potential Bug: what if shortest path involves two compass directions (i.e. go over or near a poll)?
 def gpsDistance(lat1, lon1, lat2, lon2):    
     # convert decimal degrees to radians 
     lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
@@ -90,6 +91,7 @@ def airmar_callback(data):
     global timeSinceLastPublish = time.time()
   
 def competition_info_callback(data):
+  #~~Eric to explain/implement high level competition algorithms
   #need clarification with spec (what is gpsTarg1 and gpsTarg2?)
   #this message is also going to be sent through a rostopic pub when we kick off the software.
   global goal_lat = data.gpsTarg1Lat
