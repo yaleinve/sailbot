@@ -53,7 +53,8 @@ def airmar_callback(data):
   global apWndDir = data.apWndDir
   global truWndSpd = data.truWndSpd
   global truWndDir = data.truWndDir
-
+  
+  #avoid publishing every time we get data from the airmar. Every 10 seconds maybe
   if((time.time() - timeSinceLastPublish) >= 10.0):
     publish_captain()
     global timeSinceLastPublish = time.time()
@@ -65,6 +66,7 @@ def competition_info_callback(data):
   global goal_long = data.gpsTarg1Long
   publish_captain()
 
+#going to be sent from the controller probably (some switch that changes between autonomous and manual)
 def manual_callback(data):
   global isManual = data.data #the boolean that describes if we are in autonomous or in manual mode.
 
