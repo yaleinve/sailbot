@@ -2,11 +2,7 @@ SoftwareToDoList.txt 			Eric Anderson Mar 15
 (This file is meant to serve as an updatable list of open projects
 for InVe's software team.  Feel free to update as appropriate)
 
-Write guidelines for EE cape
-
 Write Airmar driver node to publish to airmar.msg
-
-Factor GPS code into single python file and import it inn apropriate places
 
 Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
   Captain:  Needs fleshing out for leg sequencing, various competition modes 
@@ -15,6 +11,8 @@ Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
   SpeedStats: Almost done- Andrew
   Helm: Waiting for Ratchet to be built
   Trim: " " " "
+
+Research wireless router options and how they interface with beaglebone
 
 Write Ratchet Servo Driver Node (for all three servos on board- main,jib,rudder)
 
@@ -26,3 +24,8 @@ Test all high level software by walking around with BBB/Laptop and having it lea
 
 Per Alex's suggestion: Hook up high level nodes to Armstrong and have Armstrong drive a
 course?
+
+
+Write guidelines for EE cape- DONE BY ERIC 3/20
+
+Factor GPS code into single python file and import it inn apropriate places- DONE BY ERIC 3/20
