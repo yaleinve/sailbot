@@ -170,12 +170,10 @@ d) tactics
 
    DON'T FORGET: All compass arithmetic is done mod 360!!!
 
-   Subscriptions: targetCourse, airmarData, speedStats
-   Publications: targetHeading
-
+Subscriptions: target_course, airmar_data, speed_stats, leg_info
+   Publications: target_heading
    Description:
-   (First Iteration): Outputs a target heading and state (Beating/Running/Reaching) for Helm to steer to.  This heading is usually targetCourse.course, with the following exceptions:
-
+   (First Iteration): Outputs a target heading and state (Beating/Running/Reaching) for Helm to steer to.  This heading is usually the course published in target_course, with the following exceptions:
        1) Beating: If the target course is within POINTING_ANGLE (probably about 50 deg) of true wind direction, define PORT as true wind direction + POINTING_ANGLE and STBD as true wind direction - POINTING_ANGLE.  Set heading to PORT or STBD, whichever is closer to current heading.  If sailing PORT and XTE > XTE_MAX, set heading to STBD.  If sailing STBD and XTE < -XTE_MAX then set heading to PORT.  This implicitly implements tacking.
 
        2)Running: Similar to Beating, except " " if (target course + 180) is within RUNNING_ANGLE (probably about 15 deg) of true wind direction, " " " " PORT as true wind direction + 180 - RUNNING_ANGLE " " STBD as true wind direction + 180 + RUNNING_ANGLE.
@@ -186,6 +184,7 @@ d) tactics
    - Implement coordinated action between Helm, Trim, and Tactics.  Possibly better performance for tacking/jibing, also could help heaving to/getting out of irons.
    - Implement adjustment for set/drift, especially if traveling across the wind.
    - Implement ML to choose best upwind/downwind heading
+
 
 e) helm
    Subscriptions: airmarData, targetHeading, (later: speedStats?)

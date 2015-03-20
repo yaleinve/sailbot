@@ -1,0 +1,2 @@
+float64 targetHeading
+string pointOfSail
