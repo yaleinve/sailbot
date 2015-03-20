@@ -34,7 +34,7 @@ isManual = False
 def publish_captain():
   if !isManual:
     rospy.init_node("captain")
-    pub_leg = rospy.Publisher("/legInfo", LegInfo, queue_size = 10)
+    pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
     
     leg_info = LegInfo()
     
