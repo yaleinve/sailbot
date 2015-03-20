@@ -1,0 +1,64 @@
+Non-exhaustive list of notes from layup meeting with Jack on 3/6
+
+Alois has details on procedure, basically
+
+mill foam
+epoxy foam
+sand foam
+repeat until super smooth
+put mold release on, let dry, repeat (how many times)
+Layup
+put perf-plastic (plastic w/ holes) on top of carbon
+put "felt" on top of that
+vacuum the entire mold (make hold a vacuum- must leave ~ 30 minutes and check)
+Put in oven, raise temperature AT SPECIFIC RATE until at temperature, bake for exact time required ~ 4 hrs
+
+Coring + stringers: make sure the core (balsa is fine) is faired so smooth interface with layup
+
+Best if the outer layers of carbon can be one six-foot sheet that sits in the hull- no patches.  If have to patch/overlap carbon, make sure there is good overlap.
+
+No sharp corners in carbon- must cut round corners
+
+For keel- could core the reinforcement ring, but shouldn't have core for bolt area (make cutouts in the core) because we'll got rot issues.  Ring layers should start very wide and then slowly thin to form actual ring.  total of maybe 6 or 7 ply?  Should use directional carbon (in cross-sectional direction, not bow-stern) for ring
+
+Hull-Deck joint : 1) can have the hull curve in at the top, deck lays on top of curved in portion, bolt together
+2) can have deck sit just inside the hull on a lip attached to the inside of the hull, bolt deck to lip
+
+Immediate Concerns, :
+We need to determine exact or close to exact placement of keel bolts and rudder post
+
+	Keel: Could constrain Center of Bouyancy is in same position of center of gravity (given a waterline!)
+
+	But what about CLR/CE of sails?
+
+	CE calculation can be done by average position of sail (integrate over area)
+
+	For model yachts, want thinner and longer bulb than expect (delamination of flow is easier b/c of different scale): http://www.onemetre.net/Design/Bulbsize/BulbSize.htm
+
+	generally rig CE must be 5% FORWARD of fin CE- fin goes slightly behind mast step
+
+	Note Bulb CG must be vertically in alignment with boat + fin CG 
+	- note bulb pos not nec fixed wrt fin
+	Fin can be moved: http://www.onemetre.net/Design/FinPosition/FinPosn.htm
+
+	Fin position determines mast position- mast must go slightly forward
+
+	If bulb CG is aft of fin CG, then blade may twist bad.  If forward of fin CG, then twist good.  But a stiff fin is probably fine. 
+
+	Rudder post should be at least 17% aft of leading edge
+	Leading edge should be vertical
+
+
+
+We need to figure out how the deck will interface with the hull (see above)
+	Should use Shoebox joint
+	Also- maybe build in a cabin?  Does it have to be flat
+	Include drain plug!  Important!
+	Rudder post should go all the way through to the deck- servo arm can go from 
+inside to outside.  That way no leakage around rudder post.
+
+	
+We need to fix the top lines of the hull on on CAD model- when viewed from the side the top of the hull isn't a smooth curve- there is a bump up in the middle.
+We need to potentially flatten the deck - it is curved at the bow (for no reason?)
+
+

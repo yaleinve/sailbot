@@ -1,0 +1,78 @@
+Schedule for Inve Spring Break 			Eric Anderson Mar 2015
+
+Alex: I suggest we start each day with a brief meeting/meals where each lead presents goals for the day.  This will make people get up in the morning (we really need people to get up and get working!)  I suggest we also do a debrief at dinner (although we continue working after dinner).  This will help with accountability and get people excited about all the stuff we're doing.  These meeting must be QUICK- not nearly as long as our weekly dinners!
+
+If you don't like anything, let us know.  NOT SET IN STONE, very tentative.
+
+People here for break and primary focus:
+Jason - Software
+Alex - Coordination/EE/Floater
+Alois - Fab
+Eric - Floater/Design-Fab liase
+Connor - Design/Fab
+Matt (after Thursday) - EE
+Jessica - Fab
+Betsy - Fab
+Andrew -Software
+Josh is available sporadically- Fab/Mill oversight
+
+Basic Goals:
+
+Software: 
+  1) Write ROS nodes that support servo position from a given topic
+  2) Write nodes to facilitate RC control if not yet done
+  3) Splash Pongo, play around, collect/analyze data
+  4) Review high level algorithm specs, update and improve
+
+Design:
+  1) (MOST IMPORTANT) Make sure we don't slow fab down
+  2) Mill hull mold
+  3) Start blade design
+  4) Continue rigging research, deck layout
+
+Fab:  Get hype!  Your time has come!
+  1) Mill foam mold for hull
+  2) Build oven, make it work
+  3) Practice Layup
+  4) Do real layup
+
+
+Tentative Schedule:
+
+Sunday
+  Arrive in the afternoon, maybe get dinner together and discuss plans for week
+  Design: Evening: Frantically prep for milling 
+  Fab: Evening: Prep for oven build 
+  Software: Talk about testing goals
+
+Monday
+  Design: Morning: Prep for mold milling.  Afternoon: Mill mold
+  Fab: Build oven in its entirety and test.  This is a big goal and will require a lot of efficient work.  Morning: all hands on deck with Alois to communicate with Design.  Afternoon: Alois to determine team to continue oven build (supervised by Alex ?), send other team to mill mold with Josh + Design.  Evening: prep mold and test mold- epoxy, fairing, mold release.  Eric and Connor to assist.  Complete oven build/test.
+  Software: Brush dust off Pongo.  Write servo drivers and test on land.
+
+Tuesday
+  Design: Finalize rudder/keel placement.  After discussion Connor models, then works on Fab, Eric helps with Pongo splash, then works on Fab
+  Fab: Morning: Finish oven if needed, finish prepping hull and practice molds (all hands).  Afternoon: Meet with Design to finalize details.  If time, do practice layup.     
+  Software: Prep for water tests.  Splash Pongo and test with Alex (write test goals before!)
+  Collect/Analyze data.
+
+Wednesday
+  Design:  Discussion of blade design.  Connor models and helps with fab if done.  Eric discusses software results and works with Fab. 
+  Fab: Complete all goals from Sunday-Tuesday.  If time, do a second practice layup and cure.  Build all pieces needed for final layup (cores, stringers, etc).Prep for real layup. 
+  Software: Fix/Improve Pongo.  Collect/Analyze data.  Review in context of high-level algorithm specifications.  Prep for Thursday tests.
+
+Thursday - LAYUP DAY!
+  Design: Either help Fab or continue blade work, depending on Fab's needs
+  Fab: Lay up the real hull.  Sounds easy, right?
+  Software: Repeat Tuesday
+
+Friday
+  Design: Probably: Repeat Thursday.  Otherwise: Celebrate, take half day off.  Discuss keel/rudder mold milling
+  Fab:  Probably: Actually lay up the hull.  Otherwise: celebrate, take half day off.  Get turnt.
+  Software: Repeat Wednesday.  Update high-level specs.  If we have the airmar, write ROS nodes for it.
+
+Weekend:
+  Software: Wrap up the week's work, begin implementing high level algorithms.  Sleep.  Think about doing homework.
+
+  Design/Fab: Probably: Frantically get to good stopping point for the week
+              Otherwise: Mill/prep blade molds. No more layup.
