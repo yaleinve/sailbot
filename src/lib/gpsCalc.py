@@ -3,7 +3,7 @@
 #A library of functions on gps coordinates.  Gps Lat and Long are each handled
 #as float64's
 
-from math import sin, cos, asin
+from math import sin, cos, asin, degrees, atan2
 
 #Returns the distance in m between two gps coordinates.
 #~~Potential Bug: what if shortest path involves two compass directions (i.e. go over or near a poll)?
