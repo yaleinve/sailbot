@@ -3,6 +3,7 @@ import time
 import roslib
 import rospy
 import sys
+import queue
 #Need a math import statement?
 
 from gpsCalc import *             #import all the gps functions
@@ -26,6 +27,7 @@ goal_long = 0.0
 target_course = 0.0
 target_range = 0.0
 
+legQueue = queue.Queue(maxsize=0)
 
 timeSinceLastPublish = 0.0
 
@@ -53,6 +55,22 @@ def publish_captain():
 
     pub_leg.publish(leg_info)
 
+
+#Every time new competition info comes in, we must re-route everything  
+def competition_info_callback(data):
+  global legQueue = queue.Queue(maxsize=0)   #Create new leg queue
+  #Switch on the competition mode but PYTHON HAS NO SWITCH!
+  a = data.compMode
+  if a == "Wait":                   #Stay in the same place so we can get there 
+  elif a == "SailTo":               #Sail to a gps target
+  elif a == "MaintainHeading":      #Sail a constant compass direction forever
+  elif a == "MaintainPointOfSail":  #Sail a constant angle to the wind forever
+  elif a == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
+  elif a == "StationKeeping":       #Stay within box created by 4 gps points
+  else:
+    #ERROR, what to do if bad input?  This is why strings as enunms suck!
+  publish_captain()
+
 def airmar_callback(data):
   global begin_lat = data.lat
   global begin_long = data.long
@@ -65,14 +83,6 @@ def airmar_callback(data):
   if((time.time() - timeSinceLastPublish) >= 10.0):
     publish_captain()
     global timeSinceLastPublish = time.time()
-  
-def competition_info_callback(data):
-  #~~Eric to explain/implement high level competition algorithms
-  #need clarification with spec (what is gpsTarg1 and gpsTarg2?)
-  #this message is also going to be sent through a rostopic pub when we kick off the software.
-  global goal_lat = data.gpsTarg1Lat
-  global goal_long = data.gpsTarg1Long
-  publish_captain()
 
 #going to be sent from the controller probably (some switch that changes between autonomous and manual)
 def manual_callback(data):
