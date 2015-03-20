@@ -5,6 +5,7 @@ import rospy
 import sys
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
+from gpsCalc import *              #import all gps functions
 from captain.msg import LegInfo
 from airmar.msg import AirmarData
 from navigator.msg import TargetCourse
@@ -13,31 +14,6 @@ begin_lat = 0.0
 begin_long = 0.0
 end_lat = 0.0
 end_long = 0.0
-
-#returns the distance in m between two gps coordinates.
-def gpsDistance(lat1, lon1, lat2, lon2):    
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    r = 6378100 # Radius of earth in meters.
-    return c * r
-
-def gpsBearing(lat1, lon1, lat2, lon2):
-  dlon = lon2 - lon1
-  y = sin(dlon) * cos(lat2)
-  x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
-  d = degrees(atan2(y, x))
-  #ensure that d is between 0 and 360
-  while(not ((d >= 0) and (d <= 360))):
-    d += 360 * (d < 0) 
-    
-  return (d)
-  
 
 def publish_navigator():
   rospy.init_node("navigator")
