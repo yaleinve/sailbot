@@ -5,6 +5,8 @@ import rospy
 import sys
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
+
+from gpsCalc import *
 from navigator.msg import TargetCourse
 from captain.msg import LegInfo
 from airmar.msg import AirmarData 
@@ -25,7 +27,7 @@ leg_course = 0.0
 
 
 #returns the scalar projection of the vector (magnitude direction) onto course.
-def calc_scalar(magnitude, direction, course):
+def vector_projection(magnitude, direction, course):
   return(cos(direction - course) * magnitude)
 
 def publish_speed_stats():
@@ -34,9 +36,9 @@ def publish_speed_stats():
     
   speed_stats = SpeedStats()
 
-  speed_stats.VMG = calc_scalar(sog, cog, target_course)
-  speeD_stats.VMGup = calc_scalar(sog, cog, twind_dir)
-  speed_stats.XTE = calc_scalar(target_range, target_course, leg_course)
+  speed_stats.VMG = vector_projection(sog, cog, target_course)
+  speeD_stats.VMGup = vector_projection(sog, cog, twind_dir)
+  speed_stats.XTE = vector_projection(target_range, target_course, leg_course)
 
   pub_stats.publish(speed_stats)
 
