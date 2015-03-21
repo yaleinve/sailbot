@@ -43,7 +43,7 @@ Course: a) The intended direction of travel of the boat, measured as a compass d
 
 Heading: The compass direction the boat is pointing (note this isn't nec. the same as the direction it is moving)
 
-Rhumbline: A virtual line (ex: on a map) connecting a starting point to a goal location.
+Rhumbline: A virtual line (ex: on a map) connecting a starting point to a goal location.  For our purposes, we can think of this line as a 'straight' line between the two points.  The technical definition is a line of constant bearing, (loxodrome), not a line on a great circle from point to point (orthodrome).  Gotta love spherical coordinates.
 
 VMG: "Velocity Made Good"- the component of velocity in the direction of the course.  ex: if you travel northeast when you want to go east, your vmg is speed*cos(45)
 

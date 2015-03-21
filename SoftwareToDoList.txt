@@ -4,16 +4,14 @@ for InVe's software team.  Feel free to update as appropriate)
 
 On a ROS computer, use catkin on tactics directory to correctly configure for ros
 
-Add a function gpsVectorAdd(lat,lon,bearing,distance) to the gpsCalc.py library
-which takes a gps position (lat and lon) and adds to it a vector specified by compass position (bearing) and distance (distance).  Returns a (lat,lon) pair of the resulting position.  With this function, we should be able to calculate the gps location of a point x meters to the north/south/etc of a given point.
-
+Write documentation for gpsCalc.py
 
 Write Airmar driver node to publish to airmar.msg
 
 Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
   Captain:  Needs fleshing out for leg sequencing, various competition modes 
   Navigator: Almost done- Andrew
-  Tactics: Not Started
+  Tactics: Completed- Eric
   SpeedStats: Almost done- Andrew
   Helm: Waiting for Ratchet to be built
   Trim: " " " "
@@ -31,6 +29,8 @@ Test all high level software by walking around with BBB/Laptop and having it lea
 Per Alex's suggestion: Hook up high level nodes to Armstrong and have Armstrong drive a
 course?
 
+Add a function gpsVectorAdd(lat,lon,bearing,distance) to the gpsCalc.py library
+which takes a gps position (lat and lon) and adds to it a vector specified by compass position (bearing) and distance (distance).  Returns a (lat,lon) pair of the resulting position.  With this function, we should be able to calculate the gps location of a point x meters to the north/south/etc of a given point.   COMPLETED ERIC 3/20
 
 Write guidelines for EE cape- DONE BY ERIC 3/20
 

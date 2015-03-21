@@ -3,13 +3,14 @@
 #A library of functions on gps coordinates.  Gps Lat and Long are each handled
 #as float64's
 
-from math import sin, cos, asin, degrees, atan2
+#Refer to http://www.movable-type.co.uk/scripts/latlong.html for math details
+
+from math import sin, cos, asin, degrees, atan2, radians, degrees
 
 #Returns the distance in m between two gps coordinates.
-#~~Potential Bug: what if shortest path involves two compass directions (i.e. go over or near a poll)?
 def gpsDistance(lat1, lon1, lat2, lon2):    
     # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    lon1, lat1, lon2, lat2 = list(map(radians, [lon1, lat1, lon2, lat2]))
 
     # haversine formula 
     dlon = lon2 - lon1 
@@ -19,15 +20,25 @@ def gpsDistance(lat1, lon1, lat2, lon2):
     r = 6378100 # Radius of earth in meters.
     return c * r
 
-#Returns the compass bearing in degrees from location 1 to location 2
+#Returns the initial compass bearing in degrees from location 1 to location 2
 def gpsBearing(lat1, lon1, lat2, lon2):
+  lon1, lat1, lon2, lat2 = list(map(radians, [lon1, lat1, lon2, lat2]))
   dlon = lon2 - lon1
   y = sin(dlon) * cos(lat2)
   x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
   d = degrees(atan2(y, x))
-  #ensure that d is between 0 and 360
-  while(not ((d >= 0) and (d <= 360))):
-    d += 360 * (d < 0) 
+  #ensure that d is between 0 and 360    #~~Eric commented this out- just use
+  #while(not ((d >= 0) and (d <= 360))): #built in mod function?
+  #  d += 360 * (d < 0) 
     
-  return (d)
+  return (d%360)
 
+#Written by Eric 3/20/15
+#Given a starting point and a vector (in meters), return the resulting gps point as a tuple
+def gpsVectorOffset(lat1,lon1,brng,range):
+  lat1,lon1,brng= list(map(radians,[lat1,lon1,brng]))  #Convert to radians
+  r = 6378100 # Radius of earth in meters.
+  d = range/r # Magnitude as proportion of Earth's radius
+  retLat = asin(sin(lat1)*cos(d)+cos(lat1)*sin(d)*cos(brng))
+  retLon = lon1 + atan2(sin(brng)*sin(d)*cos(lat1),cos(d) - sin(lat1)*sin(retLat))
+  return (degrees(retLat),degrees(retLon))
