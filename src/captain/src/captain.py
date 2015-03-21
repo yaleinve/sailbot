@@ -73,10 +73,13 @@ def checkLeg():
     global beginLong = currentLong
     
     if legQueue.empty():
+      pass
       #Error, don't crash!!!!
+    
     end = legQueue.get()
     
     if len(end) != 3:
+      pass
       #Error, don't crash!
 
     global endLat = end[0]
@@ -92,6 +95,7 @@ def loadLegQueue():
   global newSeq = True                      #We are starting over
   a = compMode
   if a ==   "Wait":                 #Stay in the same place so we can get there 
+    pass
   elif a == "SailToPoint":          #Sail to a gps target
     legQueue.put((gpsLat1,gpsLong1))#Insert a tuple gps loc
   elif a == "MaintainHeading":      #Sail a constant compass direction forever
@@ -120,7 +124,7 @@ def airmar_callback(data):
   global truWndSpd = data.truWndSpd
   global truWndDir = data.truWndDir
   
-  checkLeg()
+  checkLeg()      #Check leg every time we're in  
 
   #avoid publishing every time we get data from the airmar. Every 10 seconds maybe
   if((time.time() - timeSinceLastPublish) >= 10.0):

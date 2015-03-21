@@ -9,18 +9,17 @@ from math import sin, cos, asin, degrees, atan2, radians, degrees
 
 #Returns the distance in m between two gps coordinates.
 def gpsDistance(lat1, lon1, lat2, lon2):    
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = list(map(radians, [lon1, lat1, lon2, lat2]))
+  # convert decimal degrees to radians 
+  lon1, lat1, lon2, lat2 = list(map(radians, [lon1, lat1, lon2, lat2]))
+  # haversine formula 
+  dlon = lon2 - lon1 
+  dlat = lat2 - lat1 
+  a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+  c = 2 * asin(sqrt(a)) 
+  r = 6378100 # Radius of earth in meters.
+  return c * r
 
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    r = 6378100 # Radius of earth in meters.
-    return c * r
-
-#Returns the initial compass bearing in degrees from location 1 to location 2
+#Returns the initial compass bearing in degrees from location 1 to location 2 along a great circle route
 def gpsBearing(lat1, lon1, lat2, lon2):
   lon1, lat1, lon2, lat2 = list(map(radians, [lon1, lat1, lon2, lat2]))
   dlon = lon2 - lon1
@@ -30,8 +29,8 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   #ensure that d is between 0 and 360    #~~Eric commented this out- just use
   #while(not ((d >= 0) and (d <= 360))): #built in mod function?
   #  d += 360 * (d < 0) 
-    
   return (d%360)
+
 
 #Written by Eric 3/20/15
 #Given a starting point and a vector (in meters), return the resulting gps point as a tuple
