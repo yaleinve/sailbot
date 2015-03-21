@@ -2,7 +2,7 @@ SoftwareToDoList.txt 			Eric Anderson Mar 15
 (This file is meant to serve as an updatable list of open projects
 for InVe's software team.  Feel free to update as appropriate)
 
-Alex you should check your email regarding airmar gps precision
+On a ROS computer, use catkin on tactics directory to correctly configure for ros
 
 Add a function gpsVectorAdd(lat,lon,bearing,distance) to the gpsCalc.py library
 which takes a gps position (lat and lon) and adds to it a vector specified by compass position (bearing) and distance (distance).  Returns a (lat,lon) pair of the resulting position.  With this function, we should be able to calculate the gps location of a point x meters to the north/south/etc of a given point.
