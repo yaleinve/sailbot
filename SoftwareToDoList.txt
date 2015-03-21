@@ -18,7 +18,7 @@ Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
   Helm: Waiting for Ratchet to be built
   Trim: " " " "
 
-Research wireless router options and how they interface with beaglebone
+Research wireless router options and how they interface with beaglebone -- DONE ALEX 3/20 (See https://docs.google.com/a/yale.edu/spreadsheets/d/1beB5BEvLkQJY4xXFddYkIvXsUNpozM_eqoJODXWJMUA/edit#gid=0)
 
 Write Ratchet Servo Driver Node (for all three servos on board- main,jib,rudder)
 
