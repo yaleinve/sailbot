@@ -3,12 +3,15 @@ InVeConventions.txt					Eric Anderson Mar 2015
 Because we will have multiple people working on our codebase, it makes sense to
 adopt a standard convention for things, ESPECIALLY as it relates to ROS.  This can change after discussion- it is just a jumping off point based on what we've done so far.
 
+Latitude and Longitude are abbreviated as lat and long NOT lat and lon!!
+
 ROS Message Files stored in /msg directories;  capitalize first letter of all words.
   - example: MyMessageSignature.msg
 
 ROS topics: all lower case separated by underscores
   - example: tactics_message
 
+ROS topic fields: all lower case separated by underscores:
+
 ROS Subscriber callback functions: name should end with ..._callback.
  - example: airmar_callback
-

@@ -99,9 +99,16 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    		~~~?
    - competitionInfo    //The current competition mode and associated 
    		mode:enum	        //parameters.  Updated by humans via message
-   		gpsTarg1:~?
-   		gpsTarg2:~?
-   		gpsBox: ~?
+   		angle: float
+      gpsLat1:float
+   		gpsLong1:float
+   		gpsLat2:float
+      gpsLong2:float
+      gpsLat3:float
+      gpsLong3:float
+      gpsLat4:float
+      gpsLong4:float
+      
    - manualMode         //Whether or not manual control is being used
         manual: bool
    - speedStats 	    //The current speed, VMG,XTE,VMG upwind/downwind

@@ -38,7 +38,7 @@ def leg_info_callback(data):
 
 def listener():
   rospy.init_node("navigator")
-  rospy.Subscriber("airmarData", AirmarData, airmar_callback)
+  rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
   
   rospy.spin()
