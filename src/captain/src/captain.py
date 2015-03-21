@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 #captain.py                                     Eric Anderson Mar 15
 #Implements the captain node as described in the  specs
-#TODO check that all queue additions are 4-ples with xtemin/max and clean up airmar callback function
 
+#TO DO: Implement WAIT and StationKeeping
 
 import time
 import roslib
 import rospy
 import sys
 import queue
-#Need a math import statement?
 
 from gpsCalc import *             #import all the gps functions
 from captain.msg import LegInfo
@@ -35,86 +34,95 @@ gpsLong3 = 0.0
 gpsLat4 = 0.0
 gpsLong4 = 0.0
 angle = 0.0
-
-isManual = False     #From manual ms
-
-#Internal State
-legQueue = queue.Queue(maxsize=0)  #For leg sequencing
-timeSinceLastPublish = 0.0
-beginLat = 0.0
-beginLong = 0.0
-endLat = 0.0
-endLong = 0.0
 xteMin = 0.0
 xteMax = 0.0
-newSeq = True  #A flag to know whether we're starting a new sequence of legs
+
+#Internal State
+class Waypoint():       
+  def __init__(self, wlat,wlong,xteMin,xteMax):
+    self.wlat = wlat if abs(wlat) <=90.0 else 0.0
+    self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
+    self.xteMin = xteMini if xteMin <= -1.0 else -100.0
+    self.xteMax = xteMax if xteMax >= 1.0 else 100.0
+
+legQueue = queue.Queue(maxsize=0)  #A queue of waypoints
+beginLat = 0.0
+beginLong = 0.0
+end = None          #The end waypoint for this leg
+
 legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived"
-                    #~~Must be empirically determined, set to 2.0m for now
+cautious = False  #~~Must be empirically determined, set to 2.0m for now
+cautiousDistance = 10.0   #How far away from waypoint to we start being cautious
+timeSinceLastCheck = 0.0
 
 def publish_captain():
   rospy.init_node("captain")
   pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)    
   leg_info = LegInfo()
+  #Invariant: end != None (b/c nec called from checkLeg())
   leg_info.begin_lat = beginLat
   leg_info.begin_long = beginLong
-  leg_info.leg_course = gpsBearing(beginLat, beginLong, endLat, endLong)
-  leg_info.end_lat = endLat
-  leg_info.end_long = endLong
-  leg_info.xte_min = xteMin
-  leg_info.xte_max = xteMax
+  leg_info.leg_course = gpsBearing(beginLat, beginLong, end.wlat, end.wLong)
+  leg_info.end_lat = end.wlat
+  leg_info.end_long = end.wlong
+  leg_info.xte_min = end.xteMin
+  leg_info.xte_max = end.xteMax
   pub_leg.publish(leg_info)
 
-#Updates the state variables if we have copmpleted a leg or rerouted
+#Updates the state variables if we have completed a leg or rerouted
 def checkLeg():
-  d = gpsDistance(currentLat,currentLong,endLat,endLong)
-  if newSeq or d < legArrivalTol:      #If new or completed leg, we must update
-    global newSeq = False
-    global beginLat = currentLat
-    global beginLong = currentLong
-    
-    if legQueue.empty():
-      pass
-      #Error, don't crash!!!!
-    
-    end = legQueue.get()
-    
-    if len(end) != 3:
-      pass
-      #Error, don't crash!
+  if end == None:         #If no current waypoint
+    if legQueue.empty():    
+      compMode = "Wait"
+      loadLegQueue()      #Recursive call may result in two publications in
+      return              #rapid succession, but this isn't bad I don't think
+    else:
+      global beginLat = currentLat      #Next leg starts here
+      global beginLong = currentLong
+      global end = legQueue.get()
+      publish_captain()   
 
-    global endLat = end[0]
-    global endLong = end[1]
-    global xteMin = end[2] if end[2] < 0.0 else -100.0  #Error checking
-    global xteMax = end[3] if end[3] > 0.0 else 100.0
-    publish_captain()
-
+  #Fall thru b/c what if next leg is at the same place as this leg?
+  d = gpsDistance(currentLat,currentLong,end.wlat,end.wlong) #Recognize complete leg
+  cautious = (d < cautiousDistance)     #Should we start polling more quickly?
+  if d < legArrivalTol:
+    global end = None                 #Recursively get next leg
+    checkLeg()
 
 #Loads the leg Queue with appropriate legs given competition_info messages
 def loadLegQueue():
   global legQueue = queue.Queue(maxsize=0)  #Empty the queue
-  global newSeq = True                      #We are starting over
+  global end = None                         #We are starting over
   a = compMode
   if a ==   "Wait":                 #Stay in the same place so we can get there 
     pass
   elif a == "SailToPoint":          #Sail to a gps target
-    legQueue.put((gpsLat1,gpsLong1))#Insert a tuple gps loc
+    legQueue.put(Waypoint(gpsLat1,gpsLong1,xteMin,xteMax)) #Insert a gps loc
   elif a == "MaintainHeading":      #Sail a constant compass direction forever
     loc = gpsVectorOffset(currentLat,currentLong,angle,100000)
-    leqQueue.put(loc)               #Sail 100km in direction of angle
-  elif a == "MaintainPointOfSail":  #Sail a constant angle to the wind forever
+    leqQueue.put(Waypoint(loc[0],loc[1],xteMin,xteMax)) #Sail 100km in direction of angle
+  elif a == "MaintainPointOfSail":        #Sail a constant angle to the wind forever
     course = (truWndDir + angle) %360.0   #The course relative to the wind
     loc = gpsVectorOffset(currentLat,currentLong,course,100000)
-    leqQueue.put(loc)               #Sail 100km in direction of angle
+    leqQueue.put(Waypoint(loc[0],loc[1],xteMin,xteMax)) #Sail 100km in direction of angle
   elif a == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
-    #Create four legs forming a diamond around gps 1
+    brng = gpsBearing(currentLat,currentLong,gpsLat1,gpsLong2)
+    loc1 = gpdVectorOffset(gpsLat1,gpsLong1, (brng+90)%360, 7.0) #Pts define diamond
+    loc2 = gpdVectorOffset(gpsLat1,gpsLong1, (brng)%360, 7.0)    #Around gps1
+    loc3 = gpdVectorOffset(gpsLat1,gpsLong1, (brng-90)%360, 7.0)
+    loc4 = (gpsLat2,gpsLon2)
+    legQueue.put(loc1[0],loc1[2],xteMin,xteMax)    #Load in the legs
+    legQueue.put(loc2[0],loc2[2],-2.0,50.0)        #Different xte reqs for the
+    legQueue.put(loc3[0],loc3[2],-2.0,50.0)        #Short legs
+    legQueue.put(loc4[0],loc4[2],xteMin,xteMax)
   elif a == "StationKeeping":       #Stay within box created by 4 gps points
-    #Complicated alg
+    pass#Complicated alg, to define later
   else:
     global compMode = "Wait"        #If invalid input, do nothing
     loadLegQueue()
-  checkLeg()
-  publish_captain()                 #If there's a new route, we should publish it!
 
+  checkLeg()                        #Get first waypoint and publish
+  
 
 def airmar_callback(data):
   global currentLat = data.lat
@@ -124,45 +132,48 @@ def airmar_callback(data):
   global truWndSpd = data.truWndSpd
   global truWndDir = data.truWndDir
   
-  checkLeg()      #Check leg every time we're in  
 
-  #avoid publishing every time we get data from the airmar. Every 10 seconds maybe
-  if((time.time() - timeSinceLastPublish) >= 10.0):
-    publish_captain()
-    global timeSinceLastPublish = time.time()
+  #If we near the end of the leg or sailing a steady angle to the wind,
+  #we should call checkLeg very often.  If we
+  #are far away, we can poll less frequently
+  if(cautious or 
+    ((time.time() - timeSinceLastCheck) >= 
+      1.0 if compMode == "MaintainPointOfSail" else 5.0)):
+    checkLeg()
+    global timeSinceLastCheck = time.time()
 
 
-#Every time new competition info comes in, we must re-route everything 
-#TODO competition message not yet implemented, so I will implicitly spec it
-#here to suit my needs.  As it is human input, it has no dependencies  
+#Every time new competition info comes in, we must re-route everything
 def competition_info_callback(data):
   global legQueue = queue.Queue(maxsize=0)   #Create new leg queue
   #Switch on the competition mode but PYTHON HAS NO SWITCH!
-  global compMode = data.compMode
-  global gpsLat1 = data.gpsLat1
-  global gpsLong1 = data.gpsLong1
-  global gpsLat2 = data.gpsLat2
-  global gpsLong2 = data.gpsLong2
-  global gpsLat3 = data.gpsLat3
-  global gpsLong3 = data.gpsLong3
-  global gpsLat4 = data.gpsLat4
-  global gpsLong4 = data.gpsLong4
+  global compMode = data.comp_mode
+  global gpsLat1 = data.gps_lat1
+  global gpsLong1 = data.gps_long1
+  global gpsLat2 = data.gps_lat2
+  global gpsLong2 = data.gps_long2
+  global gpsLat3 = data.gps_lat3
+  global gpsLong3 = data.gps_long3
+  global gpsLat4 = data.gps_lat4
+  global gpsLong4 = data.gps_long4
   global angle = (data.angle)%360.0   #Angle must be a valid  compass bearing
+  global xteMin = data.xte_min
+  global xteMax = data.xte_max
 
   loadLegQueue()      #Recalculate the leg queue every time we get a new
                       #message from competition_info
 
 
 #going to be sent from the controller probably (some switch that changes between autonomous and manual)
-def manual_callback(data):
-  global isManual = data.data #the boolean that describes if we are in autonomous or in manual mode.
+#def manual_callback(data):
+#  global isManual = data.data #the boolean that describes if we are in autonomous or in manual mode.
 
 
 def listener():
   rospy.init_node("captain")
   rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("competition_info", CompetitionInfo, competition_info_callback)
-  rospy.Subscriber("manual_mode", Bool, manual_callback)
+  #rospy.Subscriber("manual_mode", Bool, manual_callback)
 
   rospy.spin() 
 

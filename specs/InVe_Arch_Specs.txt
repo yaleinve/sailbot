@@ -100,14 +100,16 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    - competitionInfo    //The current competition mode and associated 
    		mode:enum	        //parameters.  Updated by humans via message
    		angle: float
-      gpsLat1:float
-   		gpsLong1:float
-   		gpsLat2:float
-      gpsLong2:float
-      gpsLat3:float
-      gpsLong3:float
-      gpsLat4:float
-      gpsLong4:float
+      xte_min: float       //xte bounds
+      xte_max: float
+      gps_lat1:float      //gps points (up to four of them)
+   		gps_long1:float
+   		gps_lat2:float
+      gps_long2:float
+      gps_lat3:float
+      gps_long3:float
+      gps_lat4:float
+      gps_long4:float
       
    - manualMode         //Whether or not manual control is being used
         manual: bool
@@ -125,8 +127,9 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    	    begin: (lat,long) the current leg, and the max/min permissable XTE
    	    end: (lat,long)
         leg_course: double    //used in speed_calculator for determining XTE.
-   	    XTE_MIN: double
-   	    XTE_MAX: double
+   	    xte_min: double
+   	    xte_max: double
+        
 
 4) Node Specifications
 
