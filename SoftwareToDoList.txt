@@ -4,27 +4,35 @@ for InVe's software team.  Feel free to update as appropriate)
 
 On a ROS computer, use catkin on tactics directory to correctly configure for ros
 
+Testing: 
+Compile/set up all ROS nodes- BEFORE THURSDAY
+Write airmar node - THURSDAY AND FRIDAY
+Test each of the four high level nodes individual using manual publishes against specs.  Debug  WEEKEND
+
+Test all high level software by walking around with BBB/Laptop and having it lead us around.  NEXT WEEK
+
+
 Write documentation for gpsCalc.py
+
+Move all specs to git wiki
+
+
 
 Write Airmar driver node to publish to airmar.msg
 
-Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt
-  Captain:  Needs fleshing out for leg sequencing, various competition modes 
+Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt - TENTATIVELY COMPLETE
+  Captain:  Preliminary version complete, no Station Keeping yet 
   Navigator: Almost done- Andrew
   Tactics: Completed- Eric
   SpeedStats: Almost done- Andrew
   Helm: Waiting for Ratchet to be built
   Trim: " " " "
 
-Research wireless router options and how they interface with beaglebone -- DONE ALEX 3/20 (See https://docs.google.com/a/yale.edu/spreadsheets/d/1beB5BEvLkQJY4xXFddYkIvXsUNpozM_eqoJODXWJMUA/edit#gid=0)
-
 Write Ratchet Servo Driver Node (for all three servos on board- main,jib,rudder)
 
 Implement/Research "Snapshot" functionality where, when sailing under RC control, we
 can capture all data and servo positions (that way we can manually tune and remember
 good setups with balanced helm)
-
-Test all high level software by walking around with BBB/Laptop and having it lead us around.
 
 Per Alex's suggestion: Hook up high level nodes to Armstrong and have Armstrong drive a
 course?
@@ -34,4 +42,7 @@ which takes a gps position (lat and lon) and adds to it a vector specified by co
 
 Write guidelines for EE cape- DONE BY ERIC 3/20
 
-Factor GPS code into single python file and import it inn apropriate places- DONE BY ERIC 3/20
+Factor GPS code into single python file and import it in appropriate places- DONE BY ERIC 3/20
+
+
+Research wireless router options and how they interface with beaglebone -- DONE ALEX 3/20 (See https://docs.google.com/a/yale.edu/spreadsheets/d/1beB5BEvLkQJY4xXFddYkIvXsUNpozM_eqoJODXWJMUA/edit#gid=0)
