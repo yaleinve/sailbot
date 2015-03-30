@@ -5,7 +5,7 @@
 
 #Refer to http://www.movable-type.co.uk/scripts/latlong.html for math details
 
-from math import sin, cos, asin, degrees, atan2, radians, degrees
+from math import sin, cos, asin, degrees, atan2, radians, degrees, sqrt
 
 #Returns the distance in m between two gps coordinates.
 def gpsDistance(lat1, lon1, lat2, lon2):    
