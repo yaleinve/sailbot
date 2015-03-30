@@ -1,24 +1,23 @@
-SoftwareToDoList.txt 			Eric Anderson Mar 15
+SoftwareToDoList.txt 			Eric Anderson Apr '15
 (This file is meant to serve as an updatable list of open projects
 for InVe's software team.  Feel free to update as appropriate)
 
-On a ROS computer, use catkin on tactics directory to correctly configure for ros
+On a ROS computer (InVe laptop), use catkin on tactics directory to correctly configure high level nodes for ros
+
+Reload BBB with necessary software.
 
 Testing: 
-Compile/set up all ROS nodes- BEFORE THURSDAY
-Write airmar node - THURSDAY AND FRIDAY
-Test each of the four high level nodes individual using manual publishes against specs.  Debug  WEEKEND
 
-Test all high level software by walking around with BBB/Laptop and having it lead us around.  NEXT WEEK
+Compile/set up all ROS nodes
+Write airmar node when airmar comes in
+Test each of the four high level nodes individual using manual publishes against specs.  Debug
 
+Test all high level software by walking around with BBB/Laptop and having it lead us around.
 
 Write documentation for gpsCalc.py
 
 Move all specs to git wiki
 
-
-
-Write Airmar driver node to publish to airmar.msg
 
 Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt - TENTATIVELY COMPLETE
   Captain:  Preliminary version complete, no Station Keeping yet 
