@@ -2,6 +2,12 @@ SoftwareToDoList.txt 			Eric Anderson Apr '15
 (This file is meant to serve as an updatable list of open projects
 for InVe's software team.  Feel free to update as appropriate)
 
+Schedule for week of 3/30:
+Andrew ros compiles all high level and does preliminary individual (non-linked) testing on several nodes.
+Shreyas: learns git this week
+Jason: get the airmar done
+Eric: specs go on github wiki
+
 On a ROS computer (InVe laptop), use catkin on tactics directory to correctly configure high level nodes for ros
 
 Reload BBB with necessary software.
