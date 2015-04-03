@@ -1,0 +1,3 @@
+<launch>
+    <node name="fake_airmar" pkg="rostopic" type="rostopic" output="screen" args="pub -r 10 -f fake_airmar_msg.yaml /airmar_data"/>
+</launch>

@@ -1,0 +1,16 @@
+header:
+  seq: 27
+  stamp:
+    secs: 1428086815
+    nsecs: 783732077
+  frame_id: LLA
+heading: 15
+amrRoll: 15
+apWndDir: 15
+apWndSpd: 15
+cog: 15
+lat: 15
+long: 15
+sog: 15
+truWndDir: 15
+truWndSpd: 15
