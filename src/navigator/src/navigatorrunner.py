@@ -28,13 +28,17 @@ def publish_navigator():
 
 
 def airmar_callback(data):
-  global begin_lat = data.lat
-  global begin_long = data.long
+  global begin_lat
+  global begin_long
+  begin_lat = data.lat
+  begin_long = data.long
   publish_navigator()
 
 def leg_info_callback(data):
-  global end_lat = data.end_lat
-  global end_long = data.end_long
+  global end_lat
+  global end_long
+  end_lat = data.end_lat
+  end_long = data.end_long
 
 def listener():
   rospy.init_node("navigator")

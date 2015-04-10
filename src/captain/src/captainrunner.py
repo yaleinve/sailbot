@@ -13,7 +13,7 @@ import Queue
 from gpsCalc import gpsCalc  #import all the gps functions
 from captain.msg import LegInfo
 from airmar.msg import AirmarData #TODO not yet implemented.
-from competition_info.msg import CompetitionInfo #TODO not yet implemented.
+# from competition_info.msg import CompetitionInfo #TODO not yet implemented.
 from std_msgs.msg import Bool #the bool for manual mode
 
 #====== Default values on initialization ======#
@@ -45,7 +45,7 @@ class Waypoint():
     self.xteMin = xteMini if xteMin <= -1.0 else -100.0
     self.xteMax = xteMax if xteMax >= 1.0 else 100.0
 
-legQueue = queue.Queue(maxsize=0)  #A queue of waypoints
+legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints
 beginLat = 0.0
 beginLong = 0.0
 end = None          #The end waypoint for this leg
@@ -201,7 +201,7 @@ def competition_info_callback(data):
 def listener():
   rospy.init_node("captain")
   rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
-  rospy.Subscriber("competition_info", CompetitionInfo, competition_info_callback)
+  # rospy.Subscriber("competition_info", CompetitionInfo, competition_info_callback)
   #rospy.Subscriber("manual_mode", Bool, manual_callback)
 
   rospy.spin() 
