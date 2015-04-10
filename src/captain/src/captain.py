@@ -11,7 +11,7 @@ import sys
 import Queue
 
 from gpsCalc import gpsCalc  #import all the gps functions
-from captain.msg import LegInfo
+from ...captain.msg import LegInfo
 from airmar.msg import AirmarData #TODO not yet implemented.
 from competition_info.msg import CompetitionInfo #TODO not yet implemented.
 from std_msgs.msg import Bool #the bool for manual mode
