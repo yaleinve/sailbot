@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #captain.py                                     Eric Anderson Mar 15
 #Implements the captain node as described in the  specs
+#Andrew Malta 4/17/15 - fixing things
 
 #TO DO: Implement WAIT and StationKeeping
 
@@ -62,7 +63,7 @@ def publish_captain():
   #Invariant: end != None (b/c nec called from checkLeg())
   leg_info.begin_lat = beginLat
   leg_info.begin_long = beginLong
-  leg_info.leg_course = gpsBearing(beginLat, beginLong, end.wlat, end.wLong)
+  leg_info.leg_course = gpsBearing(beginLat, beginLong, end.wlat, end.wlong)
   leg_info.end_lat = end.wlat
   leg_info.end_long = end.wlong
   leg_info.xte_min = end.xteMin
@@ -76,6 +77,8 @@ def checkLeg():
   global end
   global compMode
   global legQueue
+  global cautious
+
   if end == None:         #If no current waypoint
     if legQueue.empty():    
       compMode = "Wait"
@@ -115,14 +118,14 @@ def loadLegQueue():
     leqQueue.put(Waypoint(loc[0],loc[1],xteMin,xteMax)) #Sail 100km in direction of angle
   elif a == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
     brng = gpsBearing(currentLat,currentLong,gpsLat1,gpsLong2)
-    loc1 = gpdVectorOffset(gpsLat1,gpsLong1, (brng+90)%360, 7.0) #Pts define diamond
-    loc2 = gpdVectorOffset(gpsLat1,gpsLong1, (brng)%360, 7.0)    #Around gps1
-    loc3 = gpdVectorOffset(gpsLat1,gpsLong1, (brng-90)%360, 7.0)
+    loc1 = gpsVectorOffset(gpsLat1,gpsLong1, (brng+90)%360, 7.0) #Pts define diamond
+    loc2 = gpsVectorOffset(gpsLat1,gpsLong1, (brng)%360, 7.0)    #Around gps1
+    loc3 = gpsVectorOffset(gpsLat1,gpsLong1, (brng-90)%360, 7.0)
     loc4 = (gpsLat2,gpsLon2)
-    legQueue.put(loc1[0],loc1[2],xteMin,xteMax)    #Load in the legs
-    legQueue.put(loc2[0],loc2[2],-2.0,50.0)        #Different xte reqs for the
-    legQueue.put(loc3[0],loc3[2],-2.0,50.0)        #Short legs
-    legQueue.put(loc4[0],loc4[2],xteMin,xteMax)
+    legQueue.put(loc1[0],loc1[1],xteMin,xteMax)    #Load in the legs
+    legQueue.put(loc2[0],loc2[1],-2.0,50.0)        #Different xte reqs for the
+    legQueue.put(loc3[0],loc3[1],-2.0,50.0)        #Short legs
+    legQueue.put(loc4[0],loc4[1],xteMin,xteMax)
   elif a == "StationKeeping":       #Stay within box created by 4 gps points
     pass#Complicated alg, to define later
   else:
@@ -154,8 +157,8 @@ def airmar_callback(data):
   if(cautious or 
     ((time.time() - timeSinceLastCheck) >= 
       1.0 if compMode == "MaintainPointOfSail" else 5.0)):
-    checkLeg()
     timeSinceLastCheck = time.time()
+    checkLeg()
 
 
 #Every time new competition info comes in, we must re-route everything
@@ -201,7 +204,7 @@ def competition_info_callback(data):
 def listener():
   rospy.init_node("captain")
   rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
-  # rospy.Subscriber("competition_info", CompetitionInfo, competition_info_callback)
+  #rospy.Subscriber("competition_info", CompetitionInfo, competition_info_callback)
   #rospy.Subscriber("manual_mode", Bool, manual_callback)
 
   rospy.spin() 
