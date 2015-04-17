@@ -38,6 +38,7 @@ def publish_speed_stats():
 
   speed_stats.VMG = vector_projection(sog, cog, target_course)
   speed_stats.VMGup = vector_projection(sog, cog, twind_dir)
+  #hmm I'm not sure this is how you calculate XTE, ask others.
   speed_stats.XTE = vector_projection(target_range, target_course, leg_course)
 
   pub_stats.publish(speed_stats)

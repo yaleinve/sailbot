@@ -17,9 +17,6 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   y = sin(dlon) * cos(lat2)
   x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
   d = degrees(atan2(y, x))
-  #ensure that d is between 0 and 360    #~~Eric commented this out- just use
-  #while(not ((d >= 0) and (d <= 360))): #built in mod function?
-  #  d += 360 * (d < 0) 
   return (d%360)
 
 #Given a starting point and a vector (in meters), return the resulting gps point as a tuple
@@ -29,7 +26,4 @@ def gpsVectorOffset(lat1,lon1,brng,range):
   d = range/r # Magnitude as proportion of Earth's radius
   retLat = asin(sin(lat1)*cos(d)+cos(lat1)*sin(d)*cos(brng))
   retLon = lon1 + atan2(sin(brng)*sin(d)*cos(lat1),cos(d) - sin(lat1)*sin(retLat))
-  return (degrees(retLat),degrees(retLon))  x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dlon)
-  d = degrees(atan2(y, x))
-  #ensure that d is between 0 and 360    #~~Eric commented this out- just use
-  #while(not ((d >= 0) and (d <= 360))): #built in mod functi
+  return (degrees(retLat),degrees(retLon))

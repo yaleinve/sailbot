@@ -8,7 +8,7 @@ import sys
 import time
 
 #Import the signatures/headers for the message types we have created
-from tactics.msg import TargetHeading #TODO not yet implemented
+from tactics.msg import TargetHeading 
 from navigator.msg import TargetCourse
 from airmar.msg import AirmarData 
 from speed_calculator.msg import SpeedStats
@@ -16,14 +16,17 @@ from captain.msg import LegInfo
 
 #global variables  TODO must initialize to some value!!
 target_course = 0.0  #From navigator
+
 heading = 0.0     #From airmar_data
 cog = 0.0
 sog = 0.0
 apWndDir = 0.0
 apWndSpd = 0.0
+
 xte = 0.0         #From leg_info
 xteMax = 0.0
 xteMin = 0.0
+
 #Below not currently used but could be in later iterations
 vmg = 0.0
 vmgUp = 0.0
@@ -39,6 +42,7 @@ lastTack = time.time() #Time of last tack
 #Returns the shortest signed difference between two compass headings.
 #Examples: compass_diff(359.0,2.0) = 3.0, compass_diff(2.0,359.0) = -3.0
 #Breaks ties by turning to the right 
+#tested and working 4/17/15
 def compass_diff(head1,head2):
   d = head2-head1   #raw difference
   if d >= 0.0:  #head2 is on same compass 'rotation' as head1 and ahead of head1 in a CW sense
@@ -172,7 +176,6 @@ def listener():
   rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
 
   rospy.spin()
-
 
 
 if __name__ == "__main__":
