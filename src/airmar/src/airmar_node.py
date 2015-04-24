@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
+import random
+import math
 
 from airmar.msg import AirmarData
 
@@ -20,9 +22,20 @@ class Airmar:
         # Default publishing rate is 10Hz
         self.pub_rate = rospy.Rate(rospy.get_param('rate', 10))
 
-    def fake_pub(self, pub):
+    def update_data(self, debug=False):
         '''
-        A debugging publisher that outputs fake airmar data at a rate of 10Hz
+        Fetches the latest data off the serial wire from the Airmar
+
+        debug -- if True, publish fake data, else, publish real data
+        '''
+
+        if debug:
+            # adds += 5 degrees to the current heading
+            self.heading = self.heading + 2.0*(0.5 - random.random())*0.5
+            self.heading = self.heading % 360 # degrees
+    def airmar_pub(self, pub):
+        '''
+        A publisher that outputs airmar data at a rate of 10Hz
         '''
 
         airmar_data_msg = AirmarData()
@@ -48,7 +61,8 @@ if __name__ == '__main__':
 
         while not rospy.is_shutdown():
             # TODO: Implement actual publisher instead of debugging one
-            am.fake_pub(pub)
+            am.update_data(debug=True) # Get the latest data from the airmar
+            am.airmar_pub(pub) # Publish the latest data
             am.pub_rate.sleep()
     except:
         print "what is in a name"
