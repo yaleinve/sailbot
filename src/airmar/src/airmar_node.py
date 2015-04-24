@@ -16,7 +16,10 @@ class Airmar:
         self.lat = 0
         self.long = 0
         self.sog = 0
-        self.truWndDir = 0
+
+        # For debugging, sets a random phase offset so that truWndDir starts
+        # in a different place from the heading.
+        self.truWndDir = random.random()*360.0
         self.truWndSpd = 0
 
         # Default publishing rate is 10Hz
@@ -30,9 +33,31 @@ class Airmar:
         '''
 
         if debug:
-            # adds += 5 degrees to the current heading
-            self.heading = self.heading + 2.0*(0.5 - random.random())*0.5
+            # adds += 0.5 degrees to the current heading
+            self.heading = self.heading + (0.5 - random.random())
             self.heading = self.heading % 360 # degrees
+
+            # adds += 0.25 degrees to the current roll angle
+            self.amrRoll = self.amrRoll + 2.0*(0.5 - random.random())*0.25
+            if self.amrRoll > 45:
+                self.amrRoll = 45
+            elif self.amrRoll < -45:
+                self.amrRoll = -45
+
+            self.apWndDir = self.apWndDir
+            self.apWndSpd = self.apWndSpd
+            self.cog = self.cog
+            self.lat = self.lat
+            self.long = self.long
+            self.sog = self.sog
+
+            # adds += 0.5 degrees to the current truWndDir
+            self.truWndDir = self.truWndDir + (0.5 - random.random())
+            self.truWndDir = self.truWndDir % 360 # degrees
+
+            self.truWndSpd = self.truWndSpd
+
+
     def airmar_pub(self, pub):
         '''
         A publisher that outputs airmar data at a rate of 10Hz
@@ -58,11 +83,12 @@ if __name__ == '__main__':
         am = Airmar()
 
         pub = rospy.Publisher('airmar', AirmarData, queue_size = 10)
+        rostopic.loginfo("[airmar] Started airmar node!")
 
         while not rospy.is_shutdown():
             # TODO: Implement actual publisher instead of debugging one
             am.update_data(debug=True) # Get the latest data from the airmar
             am.airmar_pub(pub) # Publish the latest data
             am.pub_rate.sleep()
-    except:
-        print "what is in a name"
+    except Exception as e:
+        print e
