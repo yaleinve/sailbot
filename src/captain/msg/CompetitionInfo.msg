@@ -1,0 +1,1 @@
+string comp_mode
