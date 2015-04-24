@@ -53,7 +53,7 @@ class Airmar():
         self.legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived"
         self.cautious = False  #~~Must be empirically determined, set to 2.0m for now
         self.cautiousDistance = 10.0   #How far away from waypoint to we start being cautious
-        self.timeSinceLastCheck = 0.0 # Used in Airmar callback
+        self.timeSinceLastCheck = -1 # Used in Airmar callback
 
     def publish_captain(self):
         rospy.init_node("captain")
@@ -71,30 +71,32 @@ class Airmar():
 
     #Updates the state variables if we have completed a leg or rerouted
     def checkLeg(self):
-        if self.end == None:         #If no current waypoint
-            pass
-        if self.legQueue.empty():
-            self.compMode = "Wait"
-            self.loadLegQueue()      #Recursive call may result in two publications in
-            return              #rapid succession, but this isn't bad I don't think
-        else:
-            self.beginLat = self.currentLat      #Next leg starts here
-            self.beginLong = self.currentLong
-            self.end = self.legQueue.get()
-            self.publish_captain()
+        if not self.compMode == "Wait":
+            if self.end == None:         #If no current waypoint
+                pass
+            elif self.legQueue.empty():
+                self.compMode = "Wait"
+                self.loadLegQueue()      #Recursive call may result in two publications in
+                return              #rapid succession, but this isn't bad I don't think
+            else:
+                self.beginLat = self.currentLat      #Next leg starts here
+                self.beginLong = self.currentLong
+                self.end = self.legQueue.get()
+                self.publish_captain()
+                rospy.loginfo("[captain] Just published leg info!")
 
-        #Fall thru b/c what if next leg is at the same place as this leg?
-        d = self.gpsDistance(self.currentLat,self.currentLong,self.end.wlat,self.end.wlong) #Recognize complete leg
-        self.cautious = (d < self.cautiousDistance)     #Should we start polling more quickly?
-        if d < self.legArrivalTol:
-            self.end = None                 #Recursively get next leg
-            self.checkLeg()
+            #Fall thru b/c what if next leg is at the same place as this leg?
+            d = self.gpsDistance(self.currentLat,self.currentLong,self.end.wlat,self.end.wlong) #Recognize complete leg
+            self.cautious = (d < self.cautiousDistance)     # True if we should start polling more quickly
+
+            # Checks if we've hit our target!
+            if d < self.legArrivalTol:
+                self.end = None
+
+        rospy.loginfo("[captain] Checked leg!")
 
     #Loads the leg Queue with appropriate legs given competition_info messages
     def loadLegQueue(self):
-        global legQueue
-        global end
-        global compMode
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
         self.end = None                         #We are starting over
         if self.compMode == "Wait":                 #Stay in the same place so we can get there 
@@ -122,9 +124,8 @@ class Airmar():
             pass # Complicated alg, to define later
         else:
             self.compMode = "Wait"        #If invalid input, do nothing
-            self.loadLegQueue()
+            # self.loadLegQueue() # FIXME: What's the idea of a recursive call here???
 
-        self.checkLeg()                        #Get first waypoint and publish
 
     def airmar_callback(self,data):
         self.currentLat = data.lat
@@ -133,18 +134,7 @@ class Airmar():
         self.apWndDir = data.apWndDir
         self.truWndSpd = data.truWndSpd
         self.truWndDir = data.truWndDir
-    
-        #If we near the end of the leg or sailing a steady angle to the wind,
-        #we should call checkLeg very often.  If we
-        #are far away, we can poll less frequently
-        if(self.cautious or
-           ((time.time() - self.timeSinceLastCheck) >=
-            1.0 if self.compMode == "MaintainPointOfSail" else 5.0)):
-    
-            self.timeSinceLastCheck = time.time()
-            self.checkLeg()
-    
-    
+
     #Every time new competition info comes in, we must re-route everything
     def competition_info_callback(self,data):
         self.legQueue = Queue.Queue(maxsize=0)   #Create new leg queue
@@ -182,11 +172,22 @@ class Airmar():
         rospy.loginfo("[captain] All subscribed, captain has started!")
         #rospy.Subscriber("manual_mode", Bool, manual_callback)
 
-        rospy.spin()
+        # If we are close to our target, we are in "cautious" mode,
+        # which calls for a higher frequency of checking if we've completed it.
+        normal_checkleg_rate = rospy.Rate(0.2) # Hz
+        cautious_checkleg_rate = rospy.Rate(1) # Hz
+
+        while not rospy.is_shutdown():
+            self.checkLeg() # Checks to see if we've arrived at our target yet
+
+            # Note that self.cautious is set by checkLeg()!
+            if self.cautious or self.compMode == "MaintainPointOfSail":
+                cautious_checkleg_rate.sleep()
+            else:
+                normal_checkleg_rate.sleep()
+
+
+
 
 if __name__ == "__main__":
     Airmar().listener()
-
-
-
-
