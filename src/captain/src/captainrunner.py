@@ -3,7 +3,7 @@
 #Implements the captain node as described in the  specs
 #Andrew Malta 4/17/15 - fixing things
 
-#TO DO: Implement WAIT and StationKeeping
+#TO DO: Implement StationKeeping
 
 import time
 import roslib
