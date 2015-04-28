@@ -38,24 +38,33 @@ def publish_speed_stats():
 
   speed_stats.VMG = vector_projection(sog, cog, target_course)
   speed_stats.VMGup = vector_projection(sog, cog, twind_dir)
+  #hmm I'm not sure this is how you calculate XTE, ask others.
   speed_stats.XTE = vector_projection(target_range, target_course, leg_course)
 
   pub_stats.publish(speed_stats)
 
 def leg_info_callback(data):
-  global leg_course = data.leg_course
+  global leg_course
+  leg_course = data.leg_course
 
 def target_course_callback(data):
-  global target_course = data.course
-  global target_range = data.range
+  global target_course
+  global target_range
+  target_course = data.course
+  target_range = data.range
 
 #assuming for now that cog and sog are in knots.
 def airmar_callback(data):
-  global cog = data.cog
-  global sog = data.sog
-  global lat = data.lat
-  global lon = data.long
-  global twind_dir = data.truWndDir
+  global cog
+  global sog
+  global lat
+  global lon
+  global twind_dir
+  cog = data.cog
+  sog = data.sog
+  lat = data.lat
+  lon = data.long
+  twind_dir = data.truWndDir
   publish_speed_stats()
 
 def listener():

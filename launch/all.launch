@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="captain" type="captainrunner.py" name="captain" />
+    <node pkg="airmar" type="airmar_node.py" name="airmar" />
+</launch>
