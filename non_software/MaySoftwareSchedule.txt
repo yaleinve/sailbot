@@ -1,0 +1,25 @@
+MaySoftwareSchedule.txt				Eric Anderson Apr 2015
+
+Immediate Goals:
+1) Get a driver for the airmar working
+ 	a) most data printed to airmar topic
+ 	b) gps data printed to gps topic (as a temporary sol'n before gps is hooked up)
+2) Get a driver for the gps working (and printing to a gps topic)
+3) After 1), start testing speedStats and tactics modules.  
+	a) test separately
+	b) test linked
+	c) test with gps driver (instead of airmar gps?)
+4) Complete leg queueing in Captain and test
+5) Test Navigator module
+	a) with dummy input
+	b) with input from (tested) captain
+
+
+Steps 1 and 2 can be done concurrently.
+Step 3 can be started after step 1 and completed after step 2
+Step 4 can be started after step 1
+Step 5 comes after step 4 because it's not as time critical 
+
+
+THERE'S ALWAYS MORE TO DO!  IF YOU'RE NOT FEELING RUSHED,
+YOU'RE MISSING SOMETHING!
