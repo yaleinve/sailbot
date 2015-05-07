@@ -139,7 +139,7 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
 4) Node Specifications
 
 a) captain
-   Subscriptions: airmar_data, manual_mode, competition_info, gps_data
+   Subscriptions: speed_calculator, manual_mode, competition_info, gps_data
    Publications:  leg_info
 
    Description: Determines the leg that the Bot should sail.  If the previous leg is completed (also determined by capn, based on cartesian distance to end of leg + fidelity of gps), publishes the next leg
