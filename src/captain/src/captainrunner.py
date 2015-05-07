@@ -23,7 +23,7 @@ class Airmar():
         def __init__(self, wlat,wlong,xteMin,xteMax):
             self.wlat = wlat if abs(wlat) <=90.0 else 0.0
             self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
-            self.xteMin = xteMini if xteMin <= -1.0 else -100.0
+            self.xteMin = xteMin if xteMin <= -1.0 else -100.0
             self.xteMax = xteMax if xteMax >= 1.0 else 100.0
 
     def __init__(self):
@@ -51,8 +51,8 @@ class Airmar():
         self.end = None          #The end waypoint for this leg
 
         self.legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived"
-        self.cautious = False  #~~Must be empirically determined, set to 2.0m for now
-        self.cautiousDistance = 10.0   #How far away from waypoint to we start being cautious
+        self.cautious = False    #~~Must be empirically determined, set to 2.0m for now
+        self.cautiousDistance = 50.0   #How far away from waypoint to we start being cautious
         self.timeSinceLastCheck = -1 # Used in Airmar callback
 
     def publish_captain(self):
@@ -69,6 +69,7 @@ class Airmar():
         leg_info.xte_max = end.xteMax
         pub_leg.publish(leg_info)
 
+    #Logic bug with checkLeg?  Do we constantly update our position as the start of the leg?
     #Updates the state variables if we have completed a leg or rerouted
     def checkLeg(self):
         if not self.compMode == "Wait":
