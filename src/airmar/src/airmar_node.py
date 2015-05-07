@@ -4,7 +4,7 @@ import rospy
 import random
 import math
 
-from airmar.msg import AirmarData
+from airmar.msg import AirmarData   #NOTE THAT THIS NO LONGER CONTAINS TRUE WIND FIELDS!!
 
 class Airmar:
     def __init__(self):
