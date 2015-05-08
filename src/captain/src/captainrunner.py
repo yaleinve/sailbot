@@ -11,21 +11,22 @@ import rospy
 import sys
 import Queue
 
-from gpsCalc import gpsCalc      #import all the gps functions
+from gpsCalc import *      #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from speed_calculator.msg import SpeedStats  #For truWndDir
 from captain.msg import CompetitionInfo      #User input
+from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool                #The bool for manual mode
 #FIXME need to add an import for the gps node!
 
+class Waypoint():
+    def __init__(self, wlat,wlong,xteMin,xteMax):
+        self.wlat = wlat if abs(wlat) <=90.0 else 0.0
+        self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
+        self.xteMin = xteMin if xteMin <= -1.0 else -100.0
+        self.xteMax = xteMax if xteMax >= 1.0 else 100.0
 class Captain():
     #Internal State
-    class Waypoint():
-        def __init__(self, wlat,wlong,xteMin,xteMax):
-            self.wlat = wlat if abs(wlat) <=90.0 else 0.0
-            self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
-            self.xteMin = xteMin if xteMin <= -1.0 else -100.0
-            self.xteMax = xteMax if xteMax >= 1.0 else 100.0
 
     def __init__(self):
         #====== Default values on initialization ======#
@@ -35,6 +36,9 @@ class Captain():
 #        self.apWndDir = 0.0
 #        self.truWndSpd = 0.0
         self.truWndDir = 0.0
+
+        # Our publisher for leg data to the navigator
+        self.pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
 
         self.compMode = "Wait"     # From competition_info
                                    # POSSIBLE VAULES:
@@ -49,7 +53,11 @@ class Captain():
         self.legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints
         self.beginLat = 0.0
         self.beginLong = 0.0
-        self.end = None          #The end waypoint for this leg
+
+        #The end waypoint for this leg
+        self.current_target_waypoint = -1 # This is the initialization value. `end` ordinarily
+                      # takes either None or a Waypoint, which is the latest
+
 
         #CONSTANTS
         self.legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived"
@@ -58,52 +66,55 @@ class Captain():
         self.timeSinceLastCheck = -1 # Used in Airmar callback
 
     def publish_captain(self):
-        rospy.init_node("captain")
-        pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
+        rospy.loginfo("[captain] I'm in pub!!!!")
         leg_info = LegInfo()
         #Invariant: end != None (b/c nec called from checkLeg())
         leg_info.begin_lat = self.beginLat
         leg_info.begin_long = self.beginLong
-        leg_info.leg_course = gpsBearing(beginLat, beginLong, end.wlat, end.wlong)
-        leg_info.end_lat = end.wlat
-        leg_info.end_long = end.wlong
-        leg_info.xte_min = end.xteMin
-        leg_info.xte_max = end.xteMax
-        pub_leg.publish(leg_info)
+        leg_info.leg_course = gpsBearing(self.beginLat, self.beginLong, self.current_target_waypoint.wlat, self.current_target_waypoint.wlong)
+        leg_info.end_lat = self.current_target_waypoint.wlat
+        leg_info.end_long = self.current_target_waypoint.wlong
+        leg_info.xte_min = self.current_target_waypoint.xteMin
+        leg_info.xte_max = self.current_target_waypoint.xteMax
+        self.pub_leg.publish(leg_info)
 
 
     #Eric rewrote checkLeg() to eliminate logic bug on May 6 2015
     #Updates the state variables if we have completed a leg or rerouted
     def checkLeg(self):
         if not self.compMode == "Wait":    #If "wait" to have nonzero functionality, this logic block must change
-            if self.end == None:           #If no current waypoint
+             #If no current waypoint OR this is our very first leg for the given competition mode
+            if self.current_target_waypoint == None or self.current_target_waypoint == -1:
+                rospy.loginfo("[captain] I'm in here!!!")
                 if self.legQueue.empty():  #If no next waypoint
                     self.compMode = "Wait" #Go into wait mode, exit
                     self.loadLegQueue()
                     return
                 else:                      #Move on to next leg, pull waypoint, start leg
+                   rospy.loginfo("[captain] I've got new latlon coords!")
                    self.beginLat = self.currentLat       #From where we currently
                    self.beginLong = self.currentLong
-                   self.end = self.legQueue.get()
+                   self.current_target_waypoint = self.legQueue.get()
                    self.publish_captain()
                    rospy.loginfo("[captain] Just  published  leg info!")
 
-            else:                          #If we have a current destination 
-                d = self.gpsDistance(self.currentLat,self.currentLong,self.end.wlat,self.end.wlong)  #Distance to waypoint
+            else:                          #If we have a current destination
+                d = self.gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
                 self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
                 if d < self.legArrivalTol:                                 # Have we "arrived"?
-                    self.end = None                                        # If so, wipe current waypoint
-                    checkLeg()                                             # This recursion is only ever 1 deep
+                    self.current_target_waypoint = -1                      # If so, wipe current waypoint
+                    self.checkLeg()                                             # This recursion is only ever 1 deep
         rospy.loginfo("[captain] Checked leg!")
 
 
     #Loads the leg Queue with appropriate legs given competition_info messages
     def loadLegQueue(self):
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
-        self.end = None                         #We are starting over
+        self.current_target_waypoint = None                         #We are starting over
         if self.compMode == "Wait":                 #Stay in the same place so we can get there 
             pass
         elif self.compMode == "SailToPoint":          #Sail to a gps target
+            rospy.loginfo("[captain] I'm in SailToPoint!")
             self.legQueue.put(Waypoint(self.gpsLat1,self.gpsLong1,self.xteMin,self.xteMax)) #Insert a gps loc
         elif self.compMode == "MaintainHeading":      #Sail a constant compass direction forever
             loc = gpsVectorOffset(self.currentLat,self.currentLong,self.angle,100000)
@@ -127,17 +138,20 @@ class Captain():
         else:
             self.compMode = "Wait"        #If invalid input, do nothing
 
+        self.checkLeg()
+
     def speed_calculator_callback(self,data):
         self.truWndDir = data.truWndDir       #This is the only field the captain might need
 
-#    def gps_info_callback(self,data):        #Comment in once topic is defined
-#        self.currentLat = data.lat
-#        self.currentLong = data.long
- 
+    def gps_info_callback(self,data):        #Comment in once topic is defined
+        self.currentLat = data.latitude
+        self.currentLong = data.longitude
+
     #Every time new competition info comes in, we must re-route everything
     def competition_info_callback(self,data):
+        rospy.loginfo("[captain] I'm in the competition_info_callback!")
         self.legQueue = Queue.Queue(maxsize=0)   #Create new leg queue
-        compMode = data.comp_mode
+        self.compMode = data.comp_mode
         self.gpsLat1 = data.gps_lat1
         self.gpsLong1 = data.gps_long1
         self.gpsLat2 = data.gps_lat2
@@ -164,11 +178,11 @@ class Captain():
     def listener(self):
         rospy.init_node("captain")
         rospy.loginfo("[captain] Subscribing to speed_calculator...")
-        rospy.Subscriber("competition_info", SpeedStats, self.speed_calculator_callback)
+        rospy.Subscriber("speed_Stats", SpeedStats, self.speed_calculator_callback) #FIXME: Find the right name for speed stats node
         rospy.loginfo("[captain] Subscribing to competition_info...")
-        rospy.Subscriber("competition_info", CompetitionInfo, self.competition_info_callback)
-        rospy.loginfo("[captain] Subscribing to gps_info...")                 #TODO this topic is not yet written 5/16/15
-        rospy.Subscriber("gps_info", GpsInfo, self.gps_info_callback)
+        rospy.Subscriber("/competition_info", CompetitionInfo, self.competition_info_callback)
+        rospy.loginfo("[captain] Subscribing to fix...")                 #TODO this topic is not yet written 5/16/15
+        rospy.Subscriber("fix", NavSatFix, self.gps_info_callback)
         #rospy.loginfo("[captain] Subscribing to manual_mode...")                 #TODO this topic is not yet written 5/16/15
         #rospy.Subscriber("manual_mode", Bool, manual_callback)
         rospy.loginfo("[captain] All subscribed, captain has started!")
