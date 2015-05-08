@@ -1,1 +1,12 @@
 string comp_mode
+float64 angle
+float64 xte_min
+float64 xte_max
+float64 gps_lat1
+float64 gps_long1
+float64 gps_lat2
+float64 gps_long2
+float64 gps_lat3
+float64 gps_long3
+float64 gps_lat4
+float64 gps_long4
