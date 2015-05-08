@@ -1,4 +1,5 @@
 <launch>
     <node pkg="captain" type="captainrunner.py" name="captain" />
     <node pkg="airmar" type="airmar_node.py" name="airmar" />
+    <node pkg="nmea_navsat_driver" type="nmea_serial_driver" name="nmea_serial_driver" args="_port:=$(env GPS_SERIAL_PORT) _baud:=9600"/>
 </launch>
