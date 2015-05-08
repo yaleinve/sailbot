@@ -135,7 +135,7 @@ class Captain():
             loc = gpsVectorOffset(self.currentLat,self.currentLong,course,50000)
             self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 100km in direction of angle
         elif self.compMode == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
-            brng = gpsBearing(self.currentLat,self.currentLong,self.gpsLat1,self.gpsLong2)
+            brng = gpsBearing(self.currentLat,self.currentLong,self.gpsLat1,self.gpsLong1)
             loc1 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng+90)%360, 7.0) #Pts define diamond
             loc2 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng)%360, 7.0)    #Around gps1
             loc3 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng-90)%360, 7.0)
