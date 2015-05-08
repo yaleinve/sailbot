@@ -25,6 +25,10 @@ class Waypoint():
         self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
         self.xteMin = xteMin if xteMin <= -1.0 else -100.0
         self.xteMax = xteMax if xteMax >= 1.0 else 100.0
+    def logWaypoint(self):
+        rospy.loginfo('[captain] waypoint')
+        rospy.loginfo('    lat: ' + str(self.wlat)+ ', long: ' + str(self.wlong))
+        rospy.loginfo('    xtemin: ' + str(self.xteMin) + ', xteMax: ' + str(self.xteMax))
 class Captain():
     #Internal State
 
@@ -99,7 +103,7 @@ class Captain():
                    rospy.loginfo("[captain] Just  published  leg info!")
 
             else:                          #If we have a current destination
-                d = self.gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
+                d = gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
                 self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
                 if d < self.legArrivalTol:                                 # Have we "arrived"?
                     self.current_target_waypoint = -1                      # If so, wipe current waypoint
@@ -112,16 +116,23 @@ class Captain():
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
         self.current_target_waypoint = None                         #We are starting over
         if self.compMode == "Wait":                 #Stay in the same place so we can get there 
+        # TODO: Wait mode should tell the navigator to quit its latest goal,
+        # and possibly let out the sheets / turn the rudder so we move as 
+        # little as possible
             pass
         elif self.compMode == "SailToPoint":          #Sail to a gps target
-            rospy.loginfo("[captain] I'm in SailToPoint!")
+            #rospy.loginfo("[captain] I'm in SailToPoint!")
             self.legQueue.put(Waypoint(self.gpsLat1,self.gpsLong1,self.xteMin,self.xteMax)) #Insert a gps loc
+            #self.legQueue.put(Waypoint(0,0,-43,43))
         elif self.compMode == "MaintainHeading":      #Sail a constant compass direction forever
-            loc = gpsVectorOffset(self.currentLat,self.currentLong,self.angle,100000)
-            self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 100km in direction of angle
+            #rospy.loginfo('[captain] entered maintain heading')
+            #rospy.loginfo('[captain] angle is ' + str(self.angle))
+            loc = gpsVectorOffset(self.currentLat,self.currentLong,self.angle,50000)
+            #rospy.loginfo('[captain] loc is ' + str(loc[0]) + ' , ' + str(loc[1]))
+            self.legQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 100km in direction of angle
         elif self.compMode == "MaintainPointOfSail":        #Sail a constant angle to the wind forever
             course = (self.truWndDir + self.angle) %360.0   #The course relative to the wind
-            loc = gpsVectorOffset(self.currentLat,self.currentLong,course,100000)
+            loc = gpsVectorOffset(self.currentLat,self.currentLong,course,50000)
             self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 100km in direction of angle
         elif self.compMode == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
             brng = gpsBearing(self.currentLat,self.currentLong,self.gpsLat1,self.gpsLong2)
@@ -129,10 +140,19 @@ class Captain():
             loc2 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng)%360, 7.0)    #Around gps1
             loc3 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng-90)%360, 7.0)
             loc4 = (self.gpsLat2,self.gpsLong2)
-            self.legQueue.put(loc1[0],loc1[1],self.xteMin,self.xteMax)    #Load in the legs
-            self.legQueue.put(loc2[0],loc2[1],-2.0,50.0)        #Different xte reqs for the
-            self.legQueue.put(loc3[0],loc3[1],-2.0,50.0)        #Short legs
-            self.legQueue.put(loc4[0],loc4[1],self.xteMin,self.xteMax)
+            w1 = Waypoint(loc1[0],loc1[1],self.xteMin,self.xteMax)
+            w1.logWaypoint()
+            w2 = Waypoint(loc2[0],loc2[1],-2.0,50.0) 
+            w2.logWaypoint() 
+            w3 = Waypoint(loc3[0],loc3[1],-2.0,50.0) 
+            w3.logWaypoint() 
+            w4 = Waypoint(loc4[0],loc4[1],self.xteMin,self.xteMax) 
+            w4.logWaypoint()
+            self.legQueue.put(w1)        #Load in the legs
+            self.legQueue.put(w2)        #Different xte reqs for the
+            self.legQueue.put(w3)        #Short legs
+            self.legQueue.put(w4)
+
         elif self.compMode == "StationKeeping":       #Stay within box created by 4 gps points
             pass # Complicated alg, to define later
         else:
@@ -144,6 +164,7 @@ class Captain():
         self.truWndDir = data.truWndDir       #This is the only field the captain might need
 
     def gps_info_callback(self,data):        #Comment in once topic is defined
+        #topic format defined in sensor_msgs.msg
         self.currentLat = data.latitude
         self.currentLong = data.longitude
 
@@ -178,11 +199,11 @@ class Captain():
     def listener(self):
         rospy.init_node("captain")
         rospy.loginfo("[captain] Subscribing to speed_calculator...")
-        rospy.Subscriber("speed_Stats", SpeedStats, self.speed_calculator_callback) #FIXME: Find the right name for speed stats node
+        rospy.Subscriber("/speed_stats", SpeedStats, self.speed_calculator_callback) #FIXME: Find the right name for speed stats node
         rospy.loginfo("[captain] Subscribing to competition_info...")
         rospy.Subscriber("/competition_info", CompetitionInfo, self.competition_info_callback)
         rospy.loginfo("[captain] Subscribing to fix...")                 #TODO this topic is not yet written 5/16/15
-        rospy.Subscriber("fix", NavSatFix, self.gps_info_callback)
+        rospy.Subscriber("fix", NavSatFix, self.gps_info_callback)       #TODO ask alex why no slash in topic name!!
         #rospy.loginfo("[captain] Subscribing to manual_mode...")                 #TODO this topic is not yet written 5/16/15
         #rospy.Subscriber("manual_mode", Bool, manual_callback)
         rospy.loginfo("[captain] All subscribed, captain has started!")
