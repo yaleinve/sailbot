@@ -4,9 +4,12 @@ from math import sin, cos, asin, degrees, atan2, radians, degrees, sqrt, hypot
 import utm
 
 #Returns the distance in m between two gps coordinates.
+
+#FIXME
 def gpsDistance(lat1, lon1, lat2, lon2):
   """
   Returns the distance in m between two gps coordinates.
+  Could cause error if the two points are in different UTM zones
   """
   point1 = utm.from_latlon(lat1, lon1)
   point2 = utm.from_latlon(lat2, lon2)

@@ -156,7 +156,7 @@ a) captain
    		later date.
 
 b) navigator
-   Subscriptions: airmar_data, leg_info, gps_data
+   Subscriptions: leg_info, gps_data
    Publications: target_course
 
    Description: Publishes to target_course a global course (compass heading) and distance to the target from the current position given leg_info.end .  Can run at 1Hz or slower, especially when very far from target location.

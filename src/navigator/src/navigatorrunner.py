@@ -9,16 +9,16 @@ from gpsCalc import *              #import all gps functions
 from captain.msg import LegInfo
 from airmar.msg import AirmarData
 from navigator.msg import TargetCourse
+from sensor_msgs.msg import NavSatFix
 
 begin_lat = 0.0
 begin_long = 0.0
 end_lat = 0.0
 end_long = 0.0
+pub_course = rospy.Publisher("/target_course", TargetCourse, queue_size = 10)
+
 
 def publish_navigator():
-  rospy.init_node("navigator")
-  pub_course = rospy.Publisher("/target_course", TargetCourse, queue_size = 10)
-    
   target_course = TargetCourse()
 
   target_course.course = gpsBearing(begin_lat, begin_long, end_lat, end_long)
@@ -27,11 +27,11 @@ def publish_navigator():
   pub_course.publish(target_course)
 
 
-def airmar_callback(data):
+def gps_info_callback(data):
   global begin_lat
   global begin_long
-  begin_lat = data.lat
-  begin_long = data.long
+  begin_lat = data.latitude
+  begin_long = data.longitude
   publish_navigator()
 
 def leg_info_callback(data):
@@ -39,11 +39,12 @@ def leg_info_callback(data):
   global end_long
   end_lat = data.end_lat
   end_long = data.end_long
+  #publish_navigator()     #Likely that gps will update fast enough that this doesn't matter...
 
 def listener():
   rospy.init_node("navigator")
-  rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
-  rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
+  rospy.Subscriber("fix", NavSatFix, gps_info_callback)
+  rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
   
   rospy.spin()
 
