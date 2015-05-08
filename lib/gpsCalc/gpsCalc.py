@@ -23,11 +23,17 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   return (d%360)
 
 #Given a starting point and a vector (in meters), return the resulting gps point as a tuple
-def gpsVectorOffset(lat1,lon1,brng,range):
-  lat1,lon1,brng= list(map(radians,[lat1,lon1,brng]))  #Convert to radians
-  r = 6378100 # Radius of earth in meters.
-  d = range/r # Magnitude as proportion of Earth's radius
-  retLat = asin(sin(lat1)*cos(d)+cos(lat1)*sin(d)*cos(brng))
-  retLon = lon1 + atan2(sin(brng)*sin(d)*cos(lat1),cos(d) - sin(lat1)*sin(retLat))
-  return (degrees(retLat),degrees(retLon))
+def gpsVectorOffset(lat1,lon1,brng,mag):
+  brng = radians(brng)                    #FIXME THIS WILL CRASH IF WE CROSS UTM ZONES!!!!
+  x,y,zn,zl  = utm.from_latlon(lat1, lon1)
+  x += sin(brng) * mag
+  y += cos(brng) * mag
+  return utm.to_latlon(x,y,zn,zl)
+
+
+#  r = 6378100 # Radius of earth in meters.
+#  d = mag/r # Magnitude as proportion of Earth's radius
+#  retLat = asin(sin(lat1)*cos(d)+cos(lat1)*sin(d)*cos(brng))
+#  retLon = lon1 + atan2(sin(brng)*sin(d)*cos(lat1),cos(d) - sin(lat1)*sin(retLat))
+#  return (degrees(retLat),degrees(retLon))
 
