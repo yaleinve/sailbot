@@ -18,12 +18,12 @@ from speed_calculator.msg import SpeedStats
 cog = 0.0
 sog = 0.0
 lat = 0.0
-long = 0.0
+lon = 0.0
  
 #airmar sensor variables to be used in publish_speed_stats()
 apWndSpd = 0.0
 apWndDir = 0.0
-tm = rospy.get_time()
+tm = 0.0
 #target_course variables to be used in calculating XTE
 target_course = 0.0
 
@@ -46,7 +46,6 @@ def vector_add(mag1,angle1,mag2,angle2):
 #This is called every time we get new gps and contains all the calculations 
 #for the node except for cog and sog, which are done in gps_data_callback()
 def publish_speed_stats():
-  rospy.init_node("speed_calculator")
   pub_stats = rospy.Publisher("/speed_stats", SpeedStats, queue_size = 10)
     
   speed_stats = SpeedStats()
@@ -85,10 +84,10 @@ def airmar_callback(data):
 #  global twind_dir
   apWndSpd = data.apWndSpd
   apWndDir = data.apWndDir
-#  cog = data.cog  #This info is no longer being collected from Airmar...
+#  cog = data.cog  #This info is no loner being collected from Airmar...
 #  sog = data.sog
 #  lat = data.lat
-#  lon = data.long
+#  lon = data.lon
 #  twind_dir = data.truWndDir
 
 #This node publishes every time it gets new gps information
@@ -96,25 +95,25 @@ def gps_data_callback(data):
   global cog
   global sog
   global lat
-  global long
+  global lon
   newTime = rospy.get_time()
   newLat = data.lat
-  newLong = data.long
+  newLong = data.lon
   
-  cog = gpsBearing(lat,long,newLat,newLong)
-  dx = gpsDistance(lat,long,newLat,newLong)  #Need dt to get sog
+  cog = gpsBearing(lat,lon,newLat,newLong)
+  dx = gpsDistance(lat,lon,newLat,newLong)  #Need dt to get sog
   dt = newTime-tm                            #dt in seconds
   sog = dx/dt                                #sog in m/s
 
   lat = newLat                               #Update position
-  long = newLong
+  lon = newLong
   tm = newTime
  
   publish_speed_stats()
 
 def listener():
   rospy.init_node("speed_calculator")
-
+  tm = rospy.get_time()
   rospy.Subscriber("navigator", TargetCourse, target_course_callback)
   rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
   rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
