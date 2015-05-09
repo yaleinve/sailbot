@@ -20,7 +20,7 @@ class Airmar:
         self.long = 0
         self.sog = 0
         self.wndUnits = "K"
-        self.ser = serial.Serial('/dev/tty.usbserial',4800, timeout=1)
+        self.ser = serial.Serial('/dev/ttyUSB0',4800, timeout=1)
         # we need to change this port to whatever it's going to be for the
         # actual machine we run ROS on 
 
@@ -67,7 +67,7 @@ class Airmar:
             self.sog = self.sog
 
         else:
-            line = ser.readline()
+            line = self.ser.readline()
             try:
                 msg = pynmea2.parse(line)
                 self.lat = msg.latitude
