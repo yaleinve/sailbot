@@ -20,9 +20,10 @@ class Airmar:
         self.long = 0
         self.sog = 0
         self.wndUnits = "K"
-        self.ser = serial.Serial('/dev/ttyUSB0',4800, timeout=1)
         # we need to change this port to whatever it's going to be for the
         # actual machine we run ROS on 
+        self.ser = serial.Serial('/dev/ttyUSB0', 4800, timeout=1)
+        self.ser.readline()
 
         # For debugging, sets a random phase offset so that apWndDir starts
         # in a different place from the heading.
@@ -37,53 +38,24 @@ class Airmar:
         Fetches the latest data off the serial wire from the Airmar
         debug -- if True, publish fake data, else, publish real data
         '''
+        line = self.ser.readline()
+        try:
+            msg = pynmea2.parse(line)
+            # self.lat = msg.latitude
+            # self.long = msg.longitude
+            if msg.sentence_type == 'MWV':
+                self.apWndSpd = msg.wind_speed
+                self.wndUnits = msg.wind_speed_units
+                self.apWndDir = msg.wind_angle
+            elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
+                self.heading = msg.heading
+            elif msg.sentence_type == 'VTG':
+                self.cog = msg.true_track # change to mag_track for magnetic cog
+                self.sog = msg.spd_over_grnd_kts # can also support kmph
 
-        if debug:
-            # adds += 0.5 degrees to the current heading
-            self.heading = self.heading + (0.5 - random.random())
-            self.heading = self.heading % 360 # degrees
-
-            # adds += 0.25 degrees to the current roll angle
-            self.amrRoll = self.amrRoll + 2.0*(0.5 - random.random())*0.25
-            if self.amrRoll > 45:
-                self.amrRoll = 45
-            elif self.amrRoll < -45:
-                self.amrRoll = -45
-
-            # adds += 0.5 degrees to the current truWndDir
-            self.truWndDir = self.truWndDir + (0.5 - random.random())
-            self.truWndDir = self.truWndDir % 360 # degrees
-
-            # adds += 0.5 units to the current truWndSpd TODO: Knots?
-            self.truWndSpd = self.truWndSpd + (0.5 - random.random())
-            if self.truWndSpd > 10:
-                self.truWndSpd = 10
-            elif self.truWndSpd < 0:
-                self.truWndSpd = 0
-
-            self.cog = self.cog
-            self.lat = self.lat
-            self.long = self.long
-            self.sog = self.sog
-
-        else:
-            line = self.ser.readline()
-            try:
-                msg = pynmea2.parse(line)
-                self.lat = msg.latitude
-                self.long = msg.longitude
-                if msg.sentence_type == 'MWV':
-                    self.apWndSpd = msg.speed
-                    self.wndUnits = msg.wind_speed_units
-                    self.apWndDir = msg.wind_angle
-                elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
-                    self.heading = msg.heading
-                elif msg.sentence_type == 'VTG':
-                    self.cog = msg.true_track # change to mag_track for magnetic cog
-                    self.sog = msg.spd_over_grnd_kts # can also support kmph
-
-            except:
-                "Error!"
+        except Exception, e:
+            # print e
+            rospy.loginfo("[airmar] Error!")
 
 
 
@@ -114,7 +86,7 @@ if __name__ == '__main__':
         rospy.init_node('airmar');
         am = Airmar()
 
-        pub = rospy.Publisher('airmar_data', AirmarData, queue_size = 10)
+        pub = rospy.Publisher('/airmar_data', AirmarData, queue_size = 10)
         rospy.loginfo("[airmar] Started airmar node!")
 
         while not rospy.is_shutdown():

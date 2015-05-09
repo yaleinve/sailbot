@@ -13,6 +13,8 @@ def gpsDistance(lat1, lon1, lat2, lon2):
   """
   point1 = utm.from_latlon(lat1, lon1)
   point2 = utm.from_latlon(lat2, lon2)
+  print (str(point1))
+  print(str(point2))
   return hypot(point2[0] - point1[0], point2[1] - point1[1])
 
 

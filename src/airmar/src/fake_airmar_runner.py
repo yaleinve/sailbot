@@ -10,12 +10,12 @@ class Airmar:
     def __init__(self):
         self.heading = 0
         self.amrRoll = 0
-        self.truWndDir = 0
-        self.truWndSpd = 0
-        self.cog = 0
-        self.lat = 0
-        self.long = 0
-        self.sog = 0
+        #self.truWndDir = 0
+        #self.truWndSpd = 0
+        #self.cog = 0
+        #self.lat = 0
+        #self.long = 0
+        #self.sog = 0
 
         # For debugging, sets a random phase offset so that apWndDir starts
         # in a different place from the heading.
@@ -43,7 +43,7 @@ class Airmar:
                 self.amrRoll = 45
             elif self.amrRoll < -45:
                 self.amrRoll = -45
-
+            '''
             # adds += 0.5 degrees to the current truWndDir
             self.truWndDir = self.truWndDir + (0.5 - random.random())
             self.truWndDir = self.truWndDir % 360 # degrees
@@ -54,12 +54,13 @@ class Airmar:
                 self.truWndSpd = 10
             elif self.truWndSpd < 0:
                 self.truWndSpd = 0
-
+            
+            
             self.cog = self.cog
             self.lat = self.lat
             self.long = self.long
             self.sog = self.sog
-
+            '''
 
 
     def airmar_pub(self, pub):
@@ -72,13 +73,15 @@ class Airmar:
         airmar_data_msg.amrRoll = self.amrRoll
         airmar_data_msg.apWndDir = self.apWndDir
         airmar_data_msg.apWndSpd = self.apWndSpd
+        '''
         airmar_data_msg.cog = self.cog
         airmar_data_msg.lat = self.lat
         airmar_data_msg.long = self.long
         airmar_data_msg.sog = self.sog
+
         airmar_data_msg.truWndDir = self.truWndDir
         airmar_data_msg.truWndSpd = self.truWndSpd
-
+        '''
         pub.publish(airmar_data_msg)
 
 if __name__ == '__main__':
