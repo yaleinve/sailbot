@@ -20,15 +20,14 @@ class Airmar:
         self.long = 0
         self.sog = 0
         self.wndUnits = "K"
+        self.apWndDir = 0
+        self.apWndSpd = 0
+
         # we need to change this port to whatever it's going to be for the
         # actual machine we run ROS on 
         self.ser = serial.Serial('/dev/ttyUSB0', 4800, timeout=1)
         self.ser.readline()
 
-        # For debugging, sets a random phase offset so that apWndDir starts
-        # in a different place from the heading.
-        self.apWndDir = random.random()*360.0
-        self.apWndSpd = 5 # Also for debugging
 
         # Default publishing rate is 10Hz
         self.pub_rate = rospy.Rate(rospy.get_param('rate', 10))
@@ -52,6 +51,9 @@ class Airmar:
             elif msg.sentence_type == 'VTG':
                 self.cog = msg.true_track # change to mag_track for magnetic cog
                 self.sog = msg.spd_over_grnd_kts # can also support kmph
+            elif msg.sentence_type == 'GGA':
+                self.lat = msg.latitude
+                self.long = msg.longitude
 
         except Exception, e:
             # print e
