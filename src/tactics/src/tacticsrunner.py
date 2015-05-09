@@ -18,13 +18,15 @@ from captain.msg import LegInfo
 target_course = 0.0  #From navigator
 
 heading = 0.0     #From airmar_data
-cog = 0.0
-sog = 0.0
 apWndDir = 0.0
 apWndSpd = 0.0
 
-xte = 0.0         #From leg_info
-xteMax = 0.0
+xte = 0.0         #From speed_stats
+cog = 0.0
+sog = 0.0
+
+
+xteMax = 0.0      ##From leg_info
 xteMin = 0.0
 
 #Below not currently used but could be in later iterations
@@ -32,10 +34,13 @@ vmg = 0.0
 vmgUp = 0.0
 target_range = 0.0
 
+pub_tactics = rospy.Publisher("/target_heading", 
+      TargetHeading, queue_size = 10) 
+
 
 #Internal State Variables
 pointOfSail = ""       #'Enum' consisting of Beating, Reaching, Running
-targetHeading = 0.0          #Our goal heading (to be published)
+targetHeading = 0.0    #Our goal heading (to be published)
 onStbd = False         #The tack we're on
 lastTack = time.time() #Time of last tack
 
@@ -116,31 +121,21 @@ def publish_tactics():
         targetHeading = stbd
         lastTack = time.time()
 
-
-  #Publish the results
-  rospy.init_node("target_heading")  #Must reinit the node to publish
   
-  #1st arg is topic name, 2nd is filename in /msg,  3rd is  ? 
-  pub_stats = rospy.Publisher("/target_heading", 
-      TargetHeading, queue_size = 10) 
   
   target_heading = TargetHeading()  #Instantiate a message
   target_heading.pointOfSail = pointOfSail  #From globals
   target_heading.targetHeading = targetHeading
-  pub_stats.publish(target_heading) #Publish the message
+  pub_tactics.publish(target_heading) #Publish the message
 
 
 #Put the data from the airmar message into global variables
 def airmar_callback(data):
   global heading
-  global cog
-  global sog
   global apWndSpd
   global apWndDir
 
   heading  = data.heading
-  cog = data.cog
-  sog = data.sog
   apWndSpd = data.apWndSpd
   apWndDir = data.apWndDir
   publish_tactics()  #We publish every time the airmar updates
@@ -156,9 +151,14 @@ def speed_stats_callback(data):
   global xte
   global vmg
   global vmgUp
+  global cog
+  global sog
+
   xte = data.XTE
   vmg = data.VMG
   vmgUp = data.VMGup
+  cog = data.cog
+  sog = data.sog
 
 #Only need a few things from leg_info
 def leg_info_callback(data):
@@ -170,10 +170,10 @@ def leg_info_callback(data):
 def listener():
   rospy.init_node("tactics")  #Must init node to subscribe
 
-  rospy.Subscriber("navigator", TargetCourse, target_course_callback)
-  rospy.Subscriber("airmar_data", AirmarData, airmar_callback)
-  rospy.Subscriber("speed_stats", SpeedStats, speed_stats_callback)
-  rospy.Subscriber("leg_info", LegInfo, leg_info_callback)
+  rospy.Subscriber("/target_course", TargetCourse, target_course_callback)
+  rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
+  rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
+  rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
 
   rospy.spin()
 
