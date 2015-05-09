@@ -8,6 +8,7 @@ import pynmea2
 import pdb
 
 from airmar.msg import AirmarData   #NOTE THAT THIS NO LONGER CONTAINS TRUE WIND FIELDS!!
+from sensor_msgs.msg import NavSatFix
 
 class Airmar:
     def __init__(self):
@@ -61,7 +62,7 @@ class Airmar:
 
 
 
-    def airmar_pub(self, pub):
+    def airmar_pub(self, pub, pub2):
         '''
         A publisher that outputs airmar data at a rate of 10Hz
         '''
@@ -81,7 +82,12 @@ class Airmar:
         airmar_data_msg.truWndDir = self.truWndDir
         airmar_data_msg.truWndSpd = self.truWndSpd'''
 
+        lat_long_msg = NavSatFix()
+        lat_long_msg.latitude = self.lat
+        lat_long_msg.longitude = self.long
+
         pub.publish(airmar_data_msg)
+        pub2.publish(lat_long_msg)
 
 if __name__ == '__main__':
     try:
@@ -89,13 +95,14 @@ if __name__ == '__main__':
         am = Airmar()
 
         pub = rospy.Publisher('/airmar_data', AirmarData, queue_size = 10)
+        lat_long_pub = rospy.Publisher('fix', NavSatFix, queue_size = 10)
         rospy.loginfo("[airmar] Started airmar node!")
 
         while not rospy.is_shutdown():
             # TODO: Implement actual publisher instead of debugging one
             am.update_data() # Get the latest data from the airmar
             # add the debug = True flag to enter debug mode
-            am.airmar_pub(pub) # Publish the latest data
+            am.airmar_pub(pub, lat_long_pub) # Publish the latest data
             am.pub_rate.sleep()
     except Exception as e:
         print e
