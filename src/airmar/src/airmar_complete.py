@@ -76,8 +76,12 @@ class Airmar:
                     self.apWndSpd = msg.speed
                     self.wndUnits = msg.wind_speed_units
                     self.apWndDir = msg.wind_angle
-                    #TODO: COG and SOG data
-                    #TODO: heading
+                elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
+                    self.heading = msg.heading
+                elif msg.sentence_type == 'VTG':
+                    self.cog = msg.true_track # change to mag_track for magnetic cog
+                    self.sog = msg.spd_over_grnd_kts # can also support kmph
+
             except:
                 "Error!"
 
@@ -115,7 +119,8 @@ if __name__ == '__main__':
 
         while not rospy.is_shutdown():
             # TODO: Implement actual publisher instead of debugging one
-            am.update_data(debug=True) # Get the latest data from the airmar
+            am.update_data() # Get the latest data from the airmar
+            # add the debug = True flag to enter debug mode
             am.airmar_pub(pub) # Publish the latest data
             am.pub_rate.sleep()
     except Exception as e:
