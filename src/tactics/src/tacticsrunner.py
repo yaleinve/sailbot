@@ -14,7 +14,8 @@ from airmar.msg import AirmarData
 from speed_calculator.msg import SpeedStats
 from captain.msg import LegInfo
 
-#global variables  TODO must initialize to some value!!
+
+'''
 target_course = 0.0  #From navigator
 
 heading = 0.0     #From airmar_data
@@ -33,16 +34,55 @@ xteMin = 0.0
 vmg = 0.0
 vmgUp = 0.0
 target_range = 0.0
-
-pub_tactics = rospy.Publisher("/target_heading", 
-      TargetHeading, queue_size = 10) 
+'''
 
 
+'''
 #Internal State Variables
 pointOfSail = ""       #'Enum' consisting of Beating, Reaching, Running
 targetHeading = 0.0    #Our goal heading (to be published)
 onStbd = False         #The tack we're on
-lastTack = time.time() #Time of last tack
+'''
+
+
+
+def initGlobals():
+  global target_course
+  global heading
+  global apWndDir
+  global apWndSpd
+  global xte
+  global cog
+  global sog
+  global xteMax
+  global xteMin
+  global vmg
+  global vmgUp
+  global target_range
+  global pointOfSail
+  global targetHeading
+  global onStbd
+  global lastTack
+  
+  target_course = 0.0
+  heading = 0.0
+  apWndDir = 0.0
+  apWndSpd = 0.0
+  xte = 0.0
+  cog = 0.0
+  sog = 0.0
+  xteMax = 0.0
+  xteMin = 0.0
+  vmg = 0.0
+  vmgUp = 0.0
+  target_range = 0.0
+  pointOfSail = ""
+  targetHeading = 0.0
+  onStbd = False
+  lastTack = time.time()
+
+
+
 
 #Returns the shortest signed difference between two compass headings.
 #Examples: compass_diff(359.0,2.0) = 3.0, compass_diff(2.0,359.0) = -3.0
@@ -78,6 +118,8 @@ def publish_tactics():
   global targetHeading
   global pointOfSail
   global onStbd
+  global lastTack
+
   targetHeading = target_course
   pointOfSail = "Reaching"  
   onStbd = (compass_diff(heading,apWndDir) > 0.0)
@@ -138,6 +180,7 @@ def airmar_callback(data):
   heading  = data.heading
   apWndSpd = data.apWndSpd
   apWndDir = data.apWndDir
+
   publish_tactics()  #We publish every time the airmar updates
 
 #Put the data from the target course message into global variables
@@ -168,8 +211,10 @@ def leg_info_callback(data):
   xteMax = data.xte_max
 
 def listener():
-  rospy.init_node("tactics")  #Must init node to subscribe
+  pub_tactics = rospy.Publisher("/target_heading", TargetHeading, queue_size = 10) 
+  initGlobals()
 
+  rospy.init_node("tactics")  #Must init node to subscribe
   rospy.Subscriber("/target_course", TargetCourse, target_course_callback)
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
