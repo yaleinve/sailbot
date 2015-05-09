@@ -1,0 +1,1 @@
+rostopic pub /speed_stats speed_calculator/SpeedStats '{cog: 2.0, sog: 2.0, VMG: 10.0, VMGup: 7.5, XTE: 6.0}'
