@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# tactics.py 							Eric Anderson Mar 2015
+# tactics.py              Eric Anderson Mar 2015
 
 #Import statements
 import roslib
@@ -44,6 +44,7 @@ targetHeading = 0.0    #Our goal heading (to be published)
 onStbd = False         #The tack we're on
 '''
 
+pub_tactics = rospy.Publisher("/target_heading", TargetHeading, queue_size = 10) 
 
 
 def initGlobals():
@@ -63,6 +64,7 @@ def initGlobals():
   global targetHeading
   global onStbd
   global lastTack
+  global truWndDir
   
   target_course = 0.0
   heading = 0.0
@@ -80,6 +82,7 @@ def initGlobals():
   targetHeading = 0.0
   onStbd = False
   lastTack = time.time()
+  truWndDir = 0.0
 
 
 
@@ -112,7 +115,7 @@ def publish_tactics():
 
   #ACTUAL ALGORITHM:
 
-  diff = compass_diff(target_course,apWndDir)  #From where we want to go to the wind
+  diff = compass_diff(target_course,truWndDir)  #From where we want to go to the wind
 
   #Reaching Mode is default
   global targetHeading
@@ -122,13 +125,13 @@ def publish_tactics():
 
   targetHeading = target_course
   pointOfSail = "Reaching"  
-  onStbd = (compass_diff(heading,apWndDir) > 0.0)
+  onStbd = (compass_diff(heading,truWndDir) > 0.0)
 
   #Beating Mode
   if abs(diff) < pointing_angle:
     pointOfSail = "Beating"
-    stbd = (apWndDir - pointing_angle) % 360.0  #Define headings of both tacks 
-    port = (apWndDir + pointing_angle) % 360.0
+    stbd = (truWndDir - pointing_angle) % 360.0  #Define headings of both tacks 
+    port = (truWndDir + pointing_angle) % 360.0
     
     if abs(compass_diff(heading, stbd)) <= pointing_angle:  #Which one are we closer to?
       targetHeading = stbd
@@ -138,8 +141,8 @@ def publish_tactics():
   #Running mode
   elif abs(diff) > running_angle:  
     pointOfSail = "Running"
-    stbd = (apWndDir - running_angle) % 360.0  #Define headings of both tacks 
-    port = (apWndDir + running_angle) % 360.0
+    stbd = (truWndDir - running_angle) % 360.0  #Define headings of both tacks 
+    port = (truWndDir + running_angle) % 360.0
     
     if abs(compass_diff(heading,stbd)) < 180-running_angle:  #Which one are we closer to
       targetHeading = stbd
@@ -150,7 +153,7 @@ def publish_tactics():
   if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
     if pointOfSail == "Running":                  #Transitions are reveresed for
       if onStbd and xte > xteMax:                 #Beating and Running
-        targetHeading = port
+        targetHeading = port                      #Do we want to signal a jibe????
         lastTack = time.time()
       elif (not onStbd) and xte < xteMin:
         targetHeading = stbd
@@ -168,6 +171,7 @@ def publish_tactics():
   target_heading = TargetHeading()  #Instantiate a message
   target_heading.pointOfSail = pointOfSail  #From globals
   target_heading.targetHeading = targetHeading
+  #TODO add a state variable to be published for special modes (heave to, anything else?)
   pub_tactics.publish(target_heading) #Publish the message
 
 
@@ -196,12 +200,14 @@ def speed_stats_callback(data):
   global vmgUp
   global cog
   global sog
+  global truWndDir
 
   xte = data.XTE
   vmg = data.VMG
   vmgUp = data.VMGup
   cog = data.cog
   sog = data.sog
+  truWndDir = data.truWndDir
 
 #Only need a few things from leg_info
 def leg_info_callback(data):
@@ -211,7 +217,6 @@ def leg_info_callback(data):
   xteMax = data.xte_max
 
 def listener():
-  pub_tactics = rospy.Publisher("/target_heading", TargetHeading, queue_size = 10) 
   initGlobals()
 
   rospy.init_node("tactics")  #Must init node to subscribe

@@ -12,7 +12,7 @@ def gpsDistance(lat1, lon1, lat2, lon2):
   Returns the distance in m between two gps coordinates.
   Could cause error if the two points are in different UTM zones
   """
-  print vincenty((lat1, lon1), (lat2, lon2)).meters
+  return vincenty((lat1, lon1), (lat2, lon2)).meters
 
 #Returns the initial compass bearing in degrees from location 1 to location 2 along a great circle route
 def gpsBearing(lat1, lon1, lat2, lon2):
@@ -68,5 +68,5 @@ def gpsVectorOffset(lat, lon, bearing, dist):
   brg = [radians(bearing), 180, 0]
   lat = radians(lat)
   lon = radians(lon)
-  finBrg, finBackBrg, finLat, finLon = destEllipse(lat, lon, brg[0], dist, smaj, sminor)
+  finBrg, finBackBrg, finLat, finLon = destEllipse(lat, lon, brg[0], dist/1000.0, smaj, sminor)
   return (degrees(finLat), degrees(finLon))

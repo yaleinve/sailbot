@@ -40,25 +40,32 @@ class Airmar:
         debug -- if True, publish fake data, else, publish real data
         '''
         line = self.ser.readline()
-        try:
-            msg = pynmea2.parse(line)
-            # self.lat = msg.latitude
-            # self.long = msg.longitude
-            if msg.sentence_type == 'MWV':
-                self.apWndSpd = msg.wind_speed if msg.wind_speed != None else self.apWndSpd
-                self.wndUnits = msg.wind_speed_units if msg.wind_speed_units != None else self.wndUnits
-                self.apWndDir = msg.wind_angle if msg.wind_angle != None else self.apWndDir
-            elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
-                self.heading = msg.heading if msg.heading != None else self.heading
-            elif msg.sentence_type == 'VTG':
-                self.cog = msg.true_track if msg.true_track != None else self.cog # change to mag_track for magnetic cog
-                self.sog = msg.spd_over_grnd_kts if msg.spd_over_grnd_kts != None else self.sog# can also support kmph
-            elif msg.sentence_type == 'GGA':
-                self.lat = msg.latitude if msg.latitude != None else self.lat
-                self.long = msg.longitude if msg.longitude != None else self.long
+        if "," in str(line):
+            try:
+                msg = pynmea2.parse(line)
+                # self.lat = msg.latitude
+                # self.long = msg.longitude
+                if msg.sentence_type == 'MWV':
+                    self.apWndSpd = msg.wind_speed if msg.wind_speed != None else self.apWndSpd
+                    self.wndUnits = msg.wind_speed_units if msg.wind_speed_units != None else self.wndUnits
+                    self.apWndDir = msg.wind_angle if msg.wind_angle != None else self.apWndDir
+                elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
+                    self.heading = msg.heading if msg.heading != None else self.heading
+                elif msg.sentence_type == 'VTG':
+                    self.cog = msg.true_track if msg.true_track != None else self.cog # change to mag_track for magnetic cog
+                    self.sog = msg.spd_over_grnd_kts if msg.spd_over_grnd_kts != None else self.sog# can also support kmph
+                elif msg.sentence_type == 'GGA':
+                    self.lat = msg.latitude if msg.latitude != None else self.lat
+                    self.long = msg.longitude if msg.longitude != None else self.long
+                elif msg.sentence_type == 'XDR' and msg.type == 'A':
+                    self.amrRoll = float(str(msg).split(",")[6]) if str(msg).split(",")[6] != None else self.amrRoll 
+                    # The pynmea2 library can't parse our XDR messages properly
+                    # This basically grabs the roll value manually from the message (it's in a standard form)
+                
 
-        except Exception, e:
-            rospy.loginfo("[airmar] Error!")
+            except Exception, e:
+                rospy.loginfo("[airmar] Error!")
+                rospy.loginfo(str(e))
 
 
 

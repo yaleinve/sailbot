@@ -121,6 +121,7 @@ def gps_data_callback(data):
   global sog
   global lat
   global lon
+  global tm
   newTime = rospy.get_time()
   newLat = data.latitude
   newLong = data.longitude
@@ -143,6 +144,7 @@ def gps_data_callback(data):
   publish_speed_stats()
 
 def listener():
+  global tm
   rospy.init_node("speed_calculator")
   tm = rospy.get_time()
   rospy.Subscriber("/target_course", TargetCourse, target_course_callback)
@@ -150,6 +152,6 @@ def listener():
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("fix", NavSatFix, gps_data_callback)    
   rospy.spin()
-
+tm
 if __name__ == "__main__":
   listener()
