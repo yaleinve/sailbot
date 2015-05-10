@@ -31,7 +31,8 @@ leg_start_long = 0.0
 #airmar sensor variables to be used in publish_speed_stats()
 apWndSpd = 0.0
 apWndDir = 0.0
-tm = 0.0
+twind_dir = 0.0
+twind_spd = 0.0
 #target_course variables to be used in calculating XTE
 target_range = 0.0
 target_course = 0.0
@@ -73,15 +74,12 @@ def publish_speed_stats():
   speed_stats.cog = cog
   speed_stats.sog = sog
 
-  # tru + (-v) = app
-  # so: app + v = tru
-  (a,b) = vector_add(apWndSpd,apWndDir, sog, cog)
-  speed_stats.truWndDir = b
-  speed_stats.truWndSpd = a
+  speed_stats.truWndDir = twind_dir
+  speed_stats.truWndSpd = twind_spd
    
   speed_stats.VMG = vector_projection(sog, cog, leg_course)
   #Wind vector is in opposite direction of positive VMGup!!
-  speed_stats.VMGup = -1*vector_projection(sog, cog, speed_stats.truWndDir)
+  speed_stats.VMGup = -1*vector_projection(sog, cog, twind_spd)
 
   speed_stats.XTE = calculate_xte(target_range, target_course, leg_course)
 
@@ -99,59 +97,39 @@ def leg_info_callback(data):
 def target_course_callback(data):
   global target_course
   global target_range
+
   rospy.loginfo('[speed_calculator] im in target_course_callback')
   target_course = data.course
   target_range = data.range
 
 def airmar_callback(data):
-  global apWndDir
-  global apWndSpd
-#  global twind_dir
-  apWndSpd = data.apWndSpd
-  apWndDir = data.apWndDir
-#  cog = data.cog  #This info is no loner being collected from Airmar...
-#  sog = data.sog
-#  lat = data.lat
-#  lon = data.lon
-#  twind_dir = data.truWndDir
+  global twind_dir
+  global twind_spd
+  global cog
+  global sog
+
+  twind_dir = data.truWndDir
+  twind_spd = data.truWndSpd
+  cog = data.cog  
+  sog = data.sog
+
 
 #This node publishes every time it gets new gps information
 def gps_data_callback(data):
-  global cog
-  global sog
   global lat
   global lon
-  global tm
-  newTime = rospy.get_time()
-  newLat = data.latitude
-  newLong = data.longitude
-  rospy.loginfo('[speed_calculator] im in gps_data_callback')
-  
-  cog = gpsBearing(lat,lon,newLat,newLong)
-  dx = gpsDistance(lat,lon,newLat,newLong)
-  
-  #rospy.loginfo('[speed_calculator] cog = ' + str(cog) + ' dx = ' + str(dx))
 
-  dt = newTime-tm                            #dt in seconds
-  #dt = 2.0 #DEBUGGING 
-
-  sog = dx/dt  if abs(dt > 1*10**-8) else sog #sog in m/s
-
-  lat = newLat                               #Update position
-  lon = newLong
-  tm = newTime
+  lat = data.latitude                               #Update position
+  lon = data.longitude
  
   publish_speed_stats()
 
 def listener():
-  global tm
   rospy.init_node("speed_calculator")
-  tm = rospy.get_time()
   rospy.Subscriber("/target_course", TargetCourse, target_course_callback)
   rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("fix", NavSatFix, gps_data_callback)    
   rospy.spin()
-tm
 if __name__ == "__main__":
   listener()
