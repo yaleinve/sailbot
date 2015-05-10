@@ -1,2 +1,2 @@
 #!/bin/bash
-rostopic pub /competition_info captain/CompetitionInfo '{comp_mode: 'RoundAndReturn', angle: 180, gps_lat1: 2, gps_long1: 1, xte_min: -99, xte_max: 99}'
+rostopic pub /competition_info captain/CompetitionInfo '{comp_mode: 'SailToPoint', gps_lat1: 41.312586, gps_long1: -72.924949, xte_min: -20, xte_max: 20}'

@@ -4,5 +4,4 @@
 	<node pkg="navigator" type="navigator_runner.py" name="navigator" />
     <node pkg="tactics" type="tactics_runner.py" name="tactics" />
     <node pkg="speed_calculator" type="speed_calculator_runner.py" name="speed_calculator" />
-    <node pkg="nmea_navsat_driver" type="nmea_serial_driver" name="nmea_serial_driver" args="_port:=$(env GPS_SERIAL_PORT) _baud:=9600"/>
 </launch>
