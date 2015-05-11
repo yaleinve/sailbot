@@ -49,6 +49,9 @@ class Airmar:
                     self.apWndSpd = msg.wind_speed if msg.wind_speed != None else self.apWndSpd
                     self.wndUnits = msg.wind_speed_units if msg.wind_speed_units != None else self.wndUnits
                     self.apWndDir = msg.wind_angle if msg.wind_angle != None else self.apWndDir
+                elif msg.sentence_type == 'MWD':
+                    self.truWndSpd = float(str(msg).split(",")[5]) if str(msg).split(",")[5] != None else self.truWndSpd
+                    self.truWndDir = float(str(msg).split(",")[1]) if str(msg).split(",")[1] != None else self.truWndDir
                 elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
                     self.heading = msg.heading if msg.heading != None else self.heading
                 elif msg.sentence_type == 'VTG':
@@ -79,7 +82,11 @@ class Airmar:
         airmar_data_msg.amrRoll = self.amrRoll
         airmar_data_msg.apWndDir = self.apWndDir
         airmar_data_msg.apWndSpd = self.apWndSpd
-        
+        airmar_data_msg.cog = self.cog
+        airmar_data_msg.sog = self.sog
+        airmar_data_msg.truWndSpd = self.truWndSpd
+        airmar_data_msg.truWndDir = self.truWndDir
+
         # The following data is not currently in the AirmarData message spec
         # As such, it is not being published, but it is still being collected
         '''airmar_data_msg.cog = self.cog
