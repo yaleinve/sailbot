@@ -153,22 +153,22 @@ def publish_tactics():
 
     
   #Implement Tacking
-  #if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
-   # if pointOfSail == "Running":                  #Transitions are reveresed for
-   #   if onStbd and xte > xteMax:                 #Beating and Running
-   #     targetHeading = port                      #Do we want to signal a jibe????
-   #     lastTack = time.time()
-   #   elif (not onStbd) and xte < xteMin:
-   #     targetHeading = stbd
-   #     lastTack = time.time()
-   # elif pointOfSail == "Beating":
-   #   if onStbd and xte < xteMin:
-   #     targetHeading = port
-   #     lastTack = time.time()
-   #   elif (not onStbd) and xte > xteMax:
-   #     targetHeading = stbd
-   #     lastTack = time.time()
-
+  if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
+    if pointOfSail == "Running":                  #Transitions are reveresed for
+      if onStbd and xte > xteMax:                 #Beating and Running
+        targetHeading = port                      #Do we want to signal a jibe????
+        lastTack = time.time()
+      elif (not onStbd) and xte < xteMin:
+        targetHeading = stbd
+        lastTack = time.time()
+    elif pointOfSail == "Beating":
+      if onStbd and xte < xteMin:
+        targetHeading = port
+        lastTack = time.time()
+      elif (not onStbd) and xte > xteMax:
+        targetHeading = stbd
+        lastTack = time.time()
+ 
   
   
   target_heading = TargetHeading()  #Instantiate a message
