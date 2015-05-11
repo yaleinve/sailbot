@@ -110,7 +110,8 @@ def publish_tactics():
   #Constants for Racht. MUST BE EMPIRICALLY DETERMINED
   pointing_angle = 50.0   #Can't point closer than 50 degrees to wind
   running_angle = 165.0   #Don't want to sail deeper than this
-  delayBetweenTacks = 3.0 #Don't tack if tacked within the last x seconds
+  delayBetweenTacks = 10.0 #Don't tack if tacked within the last x seconds
+                           #talk to eric what would be reasonable for this delay.
  
 
   #ACTUAL ALGORITHM:
