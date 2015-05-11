@@ -59,9 +59,10 @@ def vector_add(mag1,angle1,mag2,angle2):
 #this will be negative when you are to the left of the leg_course vector ie(you t_course is 
 #between 0 and 180 degrees and visa versa)
 def calculate_xte(t_range, t_course, l_course):
-  angle = (-1 * (t_course - l_course)) if (t_course <= 180) else ((360 - t_course) - l_course)
-  xteAbs = sin(radians(angle)) * t_range
-  return xteAbs
+  angle = (t_course - l_course) % 360
+  angle = (-1 * angle) if (angle <= 180) else (360 - angle)
+  xte = sin(radians(angle)) * t_range
+  return xte
   
 #This is called every time we get new gps and contains all the calculations 
 #for the node except for cog and sog, which are done in gps_data_callback()
