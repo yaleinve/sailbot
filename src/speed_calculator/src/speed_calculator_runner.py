@@ -74,8 +74,8 @@ def publish_speed_stats():
   speed_stats.cog = cog
   speed_stats.sog = sog
 
-  speed_stats.truWndDir = twind_dir
-  speed_stats.truWndSpd = twind_spd
+  speed_stats.truWndDir = 0.0 #twind_dir   #Can hardcode a value instead of using a fan!
+  speed_stats.truWndSpd = 2.0 #twind_spd   #Same as above
    
   speed_stats.VMG = vector_projection(sog, cog, leg_course)
   #Wind vector is in opposite direction of positive VMGup!!

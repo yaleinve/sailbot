@@ -151,7 +151,7 @@ def publish_tactics():
       targetHeading = stbd
 
 
-    
+  
   #Implement Tacking
   #if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
    # if pointOfSail == "Running":                  #Transitions are reveresed for
