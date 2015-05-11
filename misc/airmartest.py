@@ -9,12 +9,13 @@ while True:
         line = ser.readline()
         try:
                 msg = pynmea2.parse(line)
-                if msg.sentence_type == 'VTG':
-                	print "COG: " + str(msg.true_track) + " SOG: " + str(msg.spd_over_grnd_kts)
-                '''if msg.sentence_type == 'GGA':
-                	print "lat: " + str(msg.latitude)
-                	print "long: " + str(msg.longitude)
-                	if msg.sentence_type == 'XDR' and msg.type == 'A':
+                if msg.sentence_type == 'MWD':
+                	print "True Wind (knots): " + str(msg).split(",")[5] + " True Wind (m/s): " + str(msg).split(",")[7]
+                if msg.sentence_type == 'MWV':
+                    print "Wind Speed: " + msg.wind_speed
+                #if msg.sentence_type == 'GGA':
+                #	print "lat: " + str(msg.latitude) + " long: " + str(msg.longitude)
+                '''	if msg.sentence_type == 'XDR' and msg.type == 'A':
                     print str(msg).split(",")[6]'''
 
         except:
