@@ -23,11 +23,12 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   d = degrees(atan2(y, x))
   return (d%360)
 
+
 def destEllipse(lat1, lon1, brg, s, a, b):
   cs1 = ds1 = ss1 = cs1m = 0
-  s *= 1000;
+  s *= 1000
   ind = 1
-  f = 1.0/298.257223563
+  f = 1.0/298.257223563    #this constant is a way to convert utm to latlong (found online)
   sb = sin(brg)
   cb = cos(brg)
   tu1 = (1-f) * tan(lat1)
@@ -36,7 +37,7 @@ def destEllipse(lat1, lon1, brg, s, a, b):
   s2 = atan2(tu1, cb)
   sa = cu1 * sb
   csa = 1 - sa * sa
-  us = csa * (a * a - b * b) / (b * b);
+  us = csa * (a * a - b * b) / (b * b)
   A = 1 + us / 16384.0 * (4096 + us * (-768 + us * (320 - 175 * us)))
   B = us / 1024 * (256 + us * (-128 + us * (74 - 47 * us)))
   s1 = s / (b * A)

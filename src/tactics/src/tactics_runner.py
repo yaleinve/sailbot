@@ -115,8 +115,8 @@ def publish_tactics():
 
   #ACTUAL ALGORITHM:
 
-  diff = compass_diff(target_course,truWndDir)  #From where we want to go to the wind
-
+  diff = compass_diff(target_course,(truWndDir + 180) % 360)  #From where we want to go to the wind
+                                                              # (remember wind vector orientation)
   #Reaching Mode is default
   global targetHeading
   global pointOfSail
@@ -125,30 +125,26 @@ def publish_tactics():
 
   targetHeading = target_course
   pointOfSail = "Reaching"  
-  onStbd = (compass_diff(heading,truWndDir) > 0.0)
+  onStbd = (compass_diff(heading,(truWndDir + 180) % 360)) > 0.0)
 
   #Beating Mode
   if abs(diff) < pointing_angle:
     pointOfSail = "Beating"
-    stbd = (truWndDir - pointing_angle) % 360.0  #Define headings of both tacks 
-    port = (truWndDir + pointing_angle) % 360.0
+    stbd = ((truWndDir - pointing_angle) + 180) % 360.0  #Define headings of both tacks 
+    port = ((truWndDir + pointing_angle) + 180) % 360.0
     
-    if abs(compass_diff(heading, stbd)) <= pointing_angle:  #Which one are we closer to?
-      targetHeading = stbd
-    else:
-      targetHeading = port
-
   #Running mode
   elif abs(diff) > running_angle:  
     pointOfSail = "Running"
-    stbd = (truWndDir - running_angle) % 360.0  #Define headings of both tacks 
-    port = (truWndDir + running_angle) % 360.0
-    
-    if abs(compass_diff(heading,stbd)) < 180-running_angle:  #Which one are we closer to
-      targetHeading = stbd
-    else:
-      targetHeading = port
+    stbd = ((truWndDir - running_angle) + 180) % 360.0  #Define headings of both tacks 
+    port = ((truWndDir + running_angle) + 180) % 360.0
 
+
+  if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
+      targetHeading = port
+  else:
+      targetHeading = stbd
+    
   #Implement Tacking
   if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
     if pointOfSail == "Running":                  #Transitions are reveresed for
