@@ -50,8 +50,8 @@ class Airmar:
                     self.wndUnits = msg.wind_speed_units if msg.wind_speed_units != None else self.wndUnits
                     self.apWndDir = msg.wind_angle if msg.wind_angle != None else self.apWndDir
                 elif msg.sentence_type == 'MWD':
-                    self.truWndSpd = float(str(msg).split(",")[5]) if str(msg).split(",")[5] != None else self.truWndSpd
-                    self.truWndDir = float(str(msg).split(",")[1]) if str(msg).split(",")[1] != None else self.truWndDir
+                    self.truWndSpd = msg.wind_speed_knots if msg.wind_speed_knots != None else self.truWndSpd
+                    self.truWndDir = msg.direction_true if msg.direction_true != None else self.truWndDir
                 elif msg.sentence_type == 'HDT': # change to HDG for magnetic heading
                     self.heading = msg.heading if msg.heading != None else self.heading
                 elif msg.sentence_type == 'VTG':
