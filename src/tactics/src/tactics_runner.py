@@ -100,7 +100,7 @@ def compass_diff(head1,head2):
       return d - 360 #head1 is very far behind head2, so easier to go CCW (must return negative!)
   else:  #d < 0.0, head1 is ahead of head 2 on same 'rotation'
     if d >= -180.0:  #head1 is only a little ahead of head2
-      return d
+      return d 
     else:
       return d + 360 #shorter to go CW to get there, so must be positive
 
@@ -115,8 +115,8 @@ def publish_tactics():
 
   #ACTUAL ALGORITHM:
 
-  diff = compass_diff(target_course,(truWndDir + 180) % 360)  #From where we want to go to the wind
-                                                              # (remember wind vector orientation)
+  diff = compass_diff(target_course,truWndDir)  #From where we want to go to the wind
+  rospy.loginfo("diff is : " + str(diff))                                                            # (remember wind vector orientation)
   #Reaching Mode is default
   global targetHeading
   global pointOfSail
@@ -125,42 +125,49 @@ def publish_tactics():
 
   targetHeading = target_course
   pointOfSail = "Reaching"  
-  onStbd = (compass_diff(heading,(truWndDir + 180) % 360)) > 0.0)
+  onStbd = (compass_diff(heading,truWndDir ) > 0.0)
+
+  stbd = 0.0
+  port = 0.0
 
   #Beating Mode
   if abs(diff) < pointing_angle:
     pointOfSail = "Beating"
-    stbd = ((truWndDir - pointing_angle) + 180) % 360.0  #Define headings of both tacks 
-    port = ((truWndDir + pointing_angle) + 180) % 360.0
+    stbd = (truWndDir - pointing_angle)  % 360#Define headings of both tacks 
+    port = (truWndDir + pointing_angle)  % 360
+    if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
+      targetHeading = port
+    else:
+      targetHeading = stbd
     
   #Running mode
   elif abs(diff) > running_angle:  
     pointOfSail = "Running"
-    stbd = ((truWndDir - running_angle) + 180) % 360.0  #Define headings of both tacks 
-    port = ((truWndDir + running_angle) + 180) % 360.0
-
-
-  if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
+    stbd = (truWndDir - running_angle) % 360   #Define headings of both tacks 
+    port = (truWndDir + running_angle) % 360
+    if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
       targetHeading = port
-  else:
+    else:
       targetHeading = stbd
+
+
     
   #Implement Tacking
-  if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
-    if pointOfSail == "Running":                  #Transitions are reveresed for
-      if onStbd and xte > xteMax:                 #Beating and Running
-        targetHeading = port                      #Do we want to signal a jibe????
-        lastTack = time.time()
-      elif (not onStbd) and xte < xteMin:
-        targetHeading = stbd
-        lastTack = time.time()
-    elif pointOfSail == "Beating":
-      if onStbd and xte < xteMin:
-        targetHeading = port
-        lastTack = time.time()
-      elif (not onStbd) and xte > xteMax:
-        targetHeading = stbd
-        lastTack = time.time()
+  #if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
+   # if pointOfSail == "Running":                  #Transitions are reveresed for
+   #   if onStbd and xte > xteMax:                 #Beating and Running
+   #     targetHeading = port                      #Do we want to signal a jibe????
+   #     lastTack = time.time()
+   #   elif (not onStbd) and xte < xteMin:
+   #     targetHeading = stbd
+   #     lastTack = time.time()
+   # elif pointOfSail == "Beating":
+   #   if onStbd and xte < xteMin:
+   #     targetHeading = port
+   #     lastTack = time.time()
+   #   elif (not onStbd) and xte > xteMax:
+   #     targetHeading = stbd
+   #     lastTack = time.time()
 
   
   

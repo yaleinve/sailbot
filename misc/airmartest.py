@@ -3,7 +3,7 @@ import pynmea2
 import pdb
 import string
 
-ser = serial.Serial('/dev/ttyUSB0', 4800, timeout=1)
+ser = serial.Serial('/dev/ttyUSB1', 4800, timeout=1)
 line = ser.readline()
 while True:
         line = ser.readline()

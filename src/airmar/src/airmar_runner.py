@@ -27,7 +27,7 @@ class Airmar:
 
         # we need to change this port to whatever it's going to be for the
         # actual machine we run ROS on 
-        self.ser = serial.Serial('/dev/ttyUSB0', 4800, timeout=1)
+        self.ser = serial.Serial('/dev/ttyUSB1', 4800, timeout=1)
         self.ser.readline()
 
 
