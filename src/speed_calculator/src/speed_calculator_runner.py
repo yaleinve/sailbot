@@ -54,15 +54,15 @@ def vector_add(mag1,angle1,mag2,angle2):
   retAngle = (degrees(atan2(y,x))) % 360.0
   return (retMag,retAngle)
 
+
+#calculate XTE from a target course and range given an intial course we wanted to sail from.
+#this will be negative when you are to the left of the leg_course vector ie(you t_course is 
+#between 0 and 180 degrees and visa versa)
 def calculate_xte(t_range, t_course, l_course):
-  xteAbs = abs(sin(t_course - l_course) * t_range)
-  bearing = gpsBearing(lat, lon, leg_start_lat, leg_start_long)
-  diff = (bearing - leg_course)%360
-  if(diff > 180):
-    xteAbs *= -1
-
+  angle = (-1 * (t_course - l_course)) if (t_course <= 180) else ((360 - t_course) - l_course)
+  xteAbs = sin(radians(angle)) * t_range
   return xteAbs
-
+  
 #This is called every time we get new gps and contains all the calculations 
 #for the node except for cog and sog, which are done in gps_data_callback()
 def publish_speed_stats():
