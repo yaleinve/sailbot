@@ -76,15 +76,15 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
 
 3) List of Topics
 
-   - airmar_data    // " " " " " " airmar
-   		apWndSpd: double
-   		apWndDir: double 
-      amrRoll: double //For later comparison to vectornav roll, but at top of mast so may be noisy
-                truWndSpd: double
-                truWndDir: double
-      heading:  double //The compass direction that the bow is pointing
+   - airmar_data    
+       apWndSpd: double
+       apWndDir: double 
+       amrRoll: double 
+       truWndSpd: double
+       truWndDir: double
+       heading:  double //The compass direction that the bow is pointing
 
-	 -gps_data
+   -gps_data		//As of 11/2015 this is coming from airmar as well.  It may still be useful to think of as a separate message...
      lat:
      long:
 
@@ -95,19 +95,18 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
    		~~~?
 
    - competition_info    //The current competition mode and associated 
-   		mode:enum	        //parameters.  Updated by humans via message
-   		angle: float
-      xte_min: float       //xte bounds. xte_min is the port side xte bound xte_max is the 
+   	mode:enum	        //parameters.  Updated by humans via message
+      	xte_min: float       //xte bounds. xte_min is the port side xte bound xte_max is the 
                              starboard side xte bound
-      xte_max: float
-      gps_lat1:float      //gps points (up to four of them)
-   		gps_long1:float
-   		gps_lat2:float
-      gps_long2:float
-      gps_lat3:float
-      gps_long3:float
-      gps_lat4:float
-      gps_long4:float
+      	xte_max: float
+      	gps_lat1:float      //gps points (up to four of them)
+   	gps_long1:float
+   	gps_lat2:float
+      	gps_long2:float
+      	gps_lat3:float
+      	gps_long3:float
+      	gps_lat4:float
+      	gps_long4:float
 
    - leg_info        //The gps coordinates of starting and ending points of 
         begin: (lat,long) the current leg, and the max/min permissable XTE
@@ -120,11 +119,11 @@ XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distanc
         manual: bool
 
    - speed_calculator //The current speed, VMG,XTE,VMG upwind/downwind
-      cog: double     //Course over ground
+      cog: double     //Course over ground, these probably come computed from the airmar at this point...
       sog: double     //Speed over ground
-   		VMG: double
-   		VMGup: double
-   		XTE: double
+      VMG: double
+      VMGup: double
+      XTE: double
       truWnd_dir      //True wind direction as calculated through vector subtraction
       truWnd_spd      // " " "  " speed " " " "
 
