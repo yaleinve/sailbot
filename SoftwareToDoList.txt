@@ -2,52 +2,18 @@ SoftwareToDoList.txt 			Eric Anderson Apr '15
 (This file is meant to serve as an updatable list of open projects
 for InVe's software team.  Feel free to update as appropriate)
 
-Schedule for week of 3/30:
-Andrew ros compiles all high level and does preliminary individual (non-linked) testing on several nodes.
-Shreyas: learns git this week
-Jason: get the airmar done
 Eric: specs go on github wiki
 
-On a ROS computer (InVe laptop), use catkin on tactics directory to correctly configure high level nodes for ros
-
-Reload BBB with necessary software.
-
 Testing: 
-
-Compile/set up all ROS nodes
-Write airmar node when airmar comes in
-Test each of the four high level nodes individual using manual publishes against specs.  Debug
-
-Test all high level software by walking around with BBB/Laptop and having it lead us around.
 
 Write documentation for gpsCalc.py
 
 Move all specs to git wiki
-
-
-Finish High Level ROS nodes as spec'ed in Inve_Arch_Specs.txt - TENTATIVELY COMPLETE
-  Captain:  Preliminary version complete, no Station Keeping yet 
-  Navigator: Almost done- Andrew
-  Tactics: Completed- Eric
-  SpeedStats: Almost done- Andrew
-  Helm: Waiting for Ratchet to be built
-  Trim: " " " "
 
 Write Ratchet Servo Driver Node (for all three servos on board- main,jib,rudder)
 
 Implement/Research "Snapshot" functionality where, when sailing under RC control, we
 can capture all data and servo positions (that way we can manually tune and remember
 good setups with balanced helm)
-
-Per Alex's suggestion: Hook up high level nodes to Armstrong and have Armstrong drive a
-course?
-
-Add a function gpsVectorAdd(lat,lon,bearing,distance) to the gpsCalc.py library
-which takes a gps position (lat and lon) and adds to it a vector specified by compass position (bearing) and distance (distance).  Returns a (lat,lon) pair of the resulting position.  With this function, we should be able to calculate the gps location of a point x meters to the north/south/etc of a given point.   COMPLETED ERIC 3/20
-
-Write guidelines for EE cape- DONE BY ERIC 3/20
-
-Factor GPS code into single python file and import it in appropriate places- DONE BY ERIC 3/20
-
 
 Research wireless router options and how they interface with beaglebone -- DONE ALEX 3/20 (See https://docs.google.com/a/yale.edu/spreadsheets/d/1beB5BEvLkQJY4xXFddYkIvXsUNpozM_eqoJODXWJMUA/edit#gid=0)
