@@ -6,6 +6,7 @@ import roslib
 import rospy
 import sys
 import time
+from compassCalc import *
 
 #Import the signatures/headers for the message types we have created
 from tactics.msg import TargetHeading 
@@ -86,7 +87,8 @@ def initGlobals():
 
 
 
-
+#ERIC REFACTORED THIS CODE TO A LIBRARY AS OF 11/15
+"""
 #Returns the shortest signed difference between two compass headings.
 #Examples: compass_diff(359.0,2.0) = 3.0, compass_diff(2.0,359.0) = -3.0
 #Breaks ties by turning to the right 
@@ -103,7 +105,7 @@ def compass_diff(head1,head2):
       return d 
     else:
       return d + 360 #shorter to go CW to get there, so must be positive
-
+"""
 
 #Publish tactics output message, target_heading.  This function contains the actual algorithm.
 def publish_tactics():
