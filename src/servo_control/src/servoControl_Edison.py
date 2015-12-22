@@ -59,6 +59,8 @@ def rotate(angle):
   jib_raw = angle.jib_pos
   rudder_raw = angle.rudder_pos
 
+  #TODO change this to take in angle (0 to 90-ish for sail) and -60 to 60 or so for rudder
+
   #Inputs for winches should be 0 to 100 (abstracted) with zero being max trim in
   if main_raw < 0.00:
     main_raw = 0.00        
@@ -90,7 +92,7 @@ def rotate(angle):
 
 def listener():
   rospy.init_node("servo_control")
-  rospy.Subscriber("radio", PongoServoPos, rotate)  #TODO: Update this to reflect that we are working with Ratchet
+  rospy.Subscriber("sail_pos", SailPos, rotate)  #TODO: Update this to reflect that we are working with Ratchet
   #TODO: subscribe to a manual tuning thing as well?  Or, create a manual tuning node separately?
   rospy.spin() 
 
