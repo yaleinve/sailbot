@@ -5,4 +5,6 @@ float64               apWndSpd
 float64               cog
 float64               sog
 float64               truWndSpd
-float64               truWndDir	
+float64               truWndDir
+float64               lat
+float64               long
