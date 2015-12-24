@@ -1,18 +1,33 @@
 #!/usr/bin/env python
 #Eric Anderson						12/15
 #Updates servo_control to reflect new output style for edison
-#using mraa library
+#using mraa libraryi
+
+#IMPORTANT: this code assumes that the winch servos cannot turn past all the way in;
+#that is, to calibrate, simply remove the drum, rotate the drum to all the way trimmed position,
+#turn the servo to angle 0, and push the drum onto the servo
+#Because we may actually need the servo to be running at duty_max for this to be the case (if
+#the servo is flipped), we provide a bool to set this at the beginning of this code.
+
 import mraa
 import roslib
 import rospy
+
 import sys
-from radio_control_pongo.msg import PongoServoPos
+#TODO: import correct message type
 
 
-#TODO: update these pins to match edison out
-jib_winch_servo_pin = "TODO"
-main_winch_servo_pin = "TODO"
-rudder_servo_pin = "TODO"
+#Ratchet Specifications: This is needed to map sail angles to sheet lengths
+drum_diameter = 1.25  #The internal diameter of the winch drums, in inches             #TODO: measure this
+boom_height = 2.00  #The vertical distance from the exit point of the main sheet to the boom #TODO: measure this
+boom_length = 12.00  #The length from the gooseneck to the mainsheet attachment point along the boom, in inches.  #TODO: measure this
+club_height = 1.00 #The vertical distance from the exit of the jibsheet to the club, in inches  #TODO: measure this
+club_length = 12.00 #The length from the club pivot to the jibsheet attachment point, in inches.  #TODO: measure this
+
+#Given Acshi's configuration, use these pins to write to servos
+jib_winch_servo_pin = 6 
+main_winch_servo_pin = 5
+rudder_servo_pin = 3
 
 #Winch servo specs
 winch_period = 20000  # in mircroseconds, corresponds to 50Hz
@@ -25,7 +40,7 @@ winch_degrees = 1260   #Degrees of movement available to servo using these specs
 rudder_period = 20000 #TODO I'm not 100% sure on this stat but it's a safe bet (most servos work at 50 Hz)
 rudder_duty_min = 1000/rudder_period
 rudder_duty_max = 2000/rudder_period
-rudder_degrees = 100
+rudder_degrees = 100  #Degrees of movement available to servo using these specs
 
 #Empirical tuning to say what max in/out should actually be, in degrees.
 # 0 = max trim in for servo
@@ -55,28 +70,46 @@ jib_pwm.enable(True)
 rudder_pwm.enable(True)			
  
 def rotate(angle):
-  main_raw = angle.main_pos   #TODO: this message format is not yet specified
-  jib_raw = angle.jib_pos
-  rudder_raw = angle.rudder_pos
+  #The input to this controller is three angles. For sails, 0 corresponds to all the way in
+  #For Rudder, 0 Corresponds to centerline
+  main_raw = angle.main_angle   #TODO: this message format is not yet specified
+  jib_raw = angle.jib_angle
+  rudder_raw = angle.rudder_angle
 
-  #TODO change this to take in angle (0 to 90-ish for sail) and -60 to 60 or so for rudder
-
-  #Inputs for winches should be 0 to 100 (abstracted) with zero being max trim in
+  #Bound the input to our acceptable sail angle range
   if main_raw < 0.00:
     main_raw = 0.00        
-  elif main_raw > 100.00:
-    main_raw = 100.0
+  elif main_raw > 90.00:
+    main_raw = 90.0
 
   if jib_raw < 0.00:
     jib_raw = 0.00        
-  elif jib_raw > 100.00:
-    jib_raw = 100.0
+  elif jib_raw > 90.00:
+    jib_raw = 90.0
 
   #Inputs for rudder should be -50 (hard to port) to 50 (hard to starboard)
   if rudder_raw < -50.00:
     rudder_raw = -50.00     
   elif rudder_raw > 50.00:
     rudder_raw = 50.0
+
+'''drum_diameter = 1.25  #The internal diameter of the winch drums, in inches             #TODO: measure this
+boom_height = 2.00  #The vertical distance from the exit point of the main sheet to the boom #TODO: measure this
+boom_length = 12.00  #The length from the gooseneck to the mainsheet attachment point along the boom, in inches.  #TODO: measure this
+club_height = 1.00 #The vertical distance from the exit of the jibsheet to the club, in inches  #TODO: measure this
+club_length = 12.00 #The length from the club pivot to the jibsheet attachment point, in inches.  #TODO: measure this
+winch_period = 20000  # in mircroseconds, corresponds to 50Hz
+winch_duty_min = 1100/winch_period
+winch_duty_max = 1900/winch_period
+winch_degrees = 1260   #Degrees of movement available to servo using these specs
+'''
+
+  #Map angles to length positions.  For sails, length 0 corresponds to all the way in (0 degrees sail)
+  #s is the length of line to ease
+  horizontal_l_main = 2.0*math.sin(main_raw/2.0)*boom_length   #Looking down from above the sheet, boom, and centerline form an isoceles triangle
+  s_main = math.sqrt(boom_height*boom_height + horizontal_l_main*horizontal_l_main)
+  drum_angle_main = s_main/math.pi/drum_diameter	       #What position we need the drum to be at
+  main_duty = winch_duty_min + (drum_angle_main/winch_degrees)*(winch_duty_max - winch_duty_min)
  
   #The input to this program is on a scale of 0 to 100 for each winch servo.  We normalize by that range.  Then, we map that to the
   #manual tuning range we have defined.  Finally, we map that desired angle to the duty cycle given the total range of the servo.
@@ -93,7 +126,6 @@ def rotate(angle):
 def listener():
   rospy.init_node("servo_control")
   rospy.Subscriber("sail_pos", SailPos, rotate)  #TODO: Update this to reflect that we are working with Ratchet
-  #TODO: subscribe to a manual tuning thing as well?  Or, create a manual tuning node separately?
   rospy.spin() 
 
 if __name__ == "__main__":
