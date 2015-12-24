@@ -14,7 +14,7 @@ import roslib
 import rospy
 
 import sys
-#TODO: import correct message type
+from servoControl.msg import ServoPos 
 
 
 #Ratchet Specifications: This is needed to map sail angles to sheet lengths
@@ -93,30 +93,21 @@ def rotate(angle):
   elif rudder_raw > 50.00:
     rudder_raw = 50.0
 
-'''drum_diameter = 1.25  #The internal diameter of the winch drums, in inches             #TODO: measure this
-boom_height = 2.00  #The vertical distance from the exit point of the main sheet to the boom #TODO: measure this
-boom_length = 12.00  #The length from the gooseneck to the mainsheet attachment point along the boom, in inches.  #TODO: measure this
-club_height = 1.00 #The vertical distance from the exit of the jibsheet to the club, in inches  #TODO: measure this
-club_length = 12.00 #The length from the club pivot to the jibsheet attachment point, in inches.  #TODO: measure this
-winch_period = 20000  # in mircroseconds, corresponds to 50Hz
-winch_duty_min = 1100/winch_period
-winch_duty_max = 1900/winch_period
-winch_degrees = 1260   #Degrees of movement available to servo using these specs
-'''
-
   #Map angles to length positions.  For sails, length 0 corresponds to all the way in (0 degrees sail)
   #s is the length of line to ease
-  horizontal_l_main = 2.0*math.sin(main_raw/2.0)*boom_length   #Looking down from above the sheet, boom, and centerline form an isoceles triangle
-  s_main = math.sqrt(boom_height*boom_height + horizontal_l_main*horizontal_l_main)
-  drum_angle_main = s_main/math.pi/drum_diameter	       #What position we need the drum to be at
+  horizontal_s_main = 2.0*math.sin(main_raw/2.0)*boom_length   #Looking down from above the sheet, boom, and centerline form an isoceles triangle
+  tot_s_main = math.sqrt(boom_height*boom_height + horizontal_s_main*horizontal_s_main)
+  drum_angle_main = tot_s_main/math.pi/drum_diameter/2.0       #What position we need the drum to be at.  Div by 2 for mechanical advantage
   main_duty = winch_duty_min + (drum_angle_main/winch_degrees)*(winch_duty_max - winch_duty_min)
- 
-  #The input to this program is on a scale of 0 to 100 for each winch servo.  We normalize by that range.  Then, we map that to the
-  #manual tuning range we have defined.  Finally, we map that desired angle to the duty cycle given the total range of the servo.
-  #TODO: double check these ranges!!!
-  main_duty = winch_duty_min + ((main_min_trim_deg + main_raw/100.0 * (main_max_trim_deg - main_min_trim_deg))/winch_degrees) * (winch_duty_max - winch_duty_min)
-  jib_duty = winch_duty_min + ((jib_min_trim_deg + jib_raw/100.0 * (jib_max_trim_deg - jib_min_trim_deg))/winch_degrees) * (winch_duty_max - winch_duty_min)
-  rudder_duty = rudder_duty_min + (rudder_raw / 50.0 * rudder_turn_deg + rudder_center_deg)/rudder_degrees * (rudder_duty_max - rudder_duty_min)
+
+  #Same for jib
+  horizontal_s_jib = 2.0*math.sin(jib_raw/2.0)*club_length     #Looking down from above the sheet, boom, and centerline form an isoceles triangle
+  tot_s_jib = math.sqrt(club_height*club_height + horizontal_s_jib*horizontal_s_jib)
+  drum_angle_jib = tot_s_jib/math.pi/drum_diameter/2.0	       #What position we need the drum to be at
+  jib_duty = winch_duty_min + (drum_angle_main/winch_degrees)*(winch_duty_max - winch_duty_min)
+
+  #Rudder is simpler, just look at delta from center
+  rudder_duty = rudder_duty_min + 0.5(rudder_duty_max-rudder_duty_min) + rudder_raw/rudder_degrees * (rudder_duty_max-rudder_duty_min)
 
   #Send pwm signals
   main_pwm.write(main_duty)
@@ -125,7 +116,7 @@ winch_degrees = 1260   #Degrees of movement available to servo using these specs
 
 def listener():
   rospy.init_node("servo_control")
-  rospy.Subscriber("sail_pos", SailPos, rotate)  #TODO: Update this to reflect that we are working with Ratchet
+  rospy.Subscriber("/servo_pos", ServoPos, rotate)
   rospy.spin() 
 
 if __name__ == "__main__":
