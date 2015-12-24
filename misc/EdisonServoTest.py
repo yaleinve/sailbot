@@ -23,9 +23,9 @@ def main():
   #MRAA setup
 
   #switch to autonomous mode.
-  AUTONOMOUS_SELECT_PIN = 2
+  AUTONOMOUS_SELECT_PIN = 2   #2 is for rudder, 4 is main/jib
   auto_select_pin = mraa.Gpio(AUTONOMOUS_SELECT_PIN)
-  auto_select_pin.dir(mraa.DIR_OUT)
+  auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
   auto_select_pin.write(1)
 
 
