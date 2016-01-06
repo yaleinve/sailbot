@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from math import *
-import utm
+#import utm
 from geopy.distance import vincenty
 
 #Returns the distance in m between two gps coordinates.

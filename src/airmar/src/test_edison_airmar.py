@@ -1,24 +1,16 @@
 #!/usr/bin/env python
+#A non-ros runner to test edison serial
 
-#Updated by Eric Anderson 12/15 to adapt for Edison and recent arch changes,
-#namely that we rely solely on airmar (and camera) for sensing - no navsat
-
-import rospy
+import mraa
 import random
 import math
 import serial
 import pynmea2
 import pdb
 import time
-import mraa
-
-from airmar.msg import AirmarData
 
 class Airmar:
     def __init__(self):
-        #Set the publishing rate of the airmar to 2Hz for now
-        self.pubInterval = 0.5      # Seonds between publishes
-
         self.heading = 0
         self.amrRoll = 0
         self.truWndDir = 0
@@ -31,24 +23,30 @@ class Airmar:
         self.apWndDir = 0
         self.apWndSpd = 0
 
-        #Initialize a publisher
-        self.pub = rospy.Publisher('/airmar_data', AirmarData, queue_size = 10)
+        # we need to change this port to whatever it's going to be for the
+        # actual machine we run ROS on 
         
-        #Use mraa to initialize edison pins 0 and 1 to serial
+        #Turn pins 0 and 1 on to uart so we can actually use them
         mraa.Uart(0)
-        #...but, after initialized, let's use the pyserial library
+        #...but, mraa is a bitch, after they're turned on let's just use pyserial library instead ;)
         self.ser = serial.Serial('/dev/ttyMFD1', 4800, timeout=1)
         self.ser.readline()
+
+    def __str__(self):
+        return str(self.__dict__)
 
     def update_data(self, debug=False):
         '''
         Fetches the latest data off the serial wire from the Airmar
-        debug -- if True, publish fake data, else, publish real data (Not yet implemented)
+        debug -- if True, publish fake data, else, publish real data
         '''
         line = self.ser.readline()
+        print "\n input line : \n" + str(line) + "\n"
         if "," in str(line):
             try:
                 msg = pynmea2.parse(line)
+                # self.lat = msg.latitude
+                # self.long = msg.longitude
                 if msg.sentence_type == 'MWV':
                     self.apWndSpd = msg.wind_speed if msg.wind_speed != None else self.apWndSpd
                     self.wndUnits = msg.wind_speed_units if msg.wind_speed_units != None else self.wndUnits
@@ -71,43 +69,17 @@ class Airmar:
                 
 
             except Exception, e:
-                rospy.loginfo("[airmar] Error!")
-                rospy.loginfo(str(e))
-
-
-
-    def airmar_pub(self, pub):
-        '''
-        A publisher that outputs airmar data at a rate of 10Hz
-        '''
-        airmar_data_msg = AirmarData()
-        airmar_data_msg.heading = self.heading
-        airmar_data_msg.amrRoll = self.amrRoll
-        airmar_data_msg.apWndDir = self.apWndDir
-        airmar_data_msg.apWndSpd = self.apWndSpd
-        airmar_data_msg.cog = self.cog
-        airmar_data_msg.sog = self.sog
-        airmar_data_msg.truWndSpd = self.truWndSpd
-        airmar_data_msg.truWndDir = self.truWndDir
-        airmar_data_msg.lat = self.lat
-        airmar_data_msg.long = self.long      #FIXME: does 'long' overwrite a python keyword?
-
-        pub.publish(airmar_data_msg)
+                print "[airmar] Error!"
+                print str(e)
+        print "Next value from airmar:" 
+        print self
 
 if __name__ == '__main__':
     try:
-        #Init the ros node
-        rospy.init_node('airmar');
         am = Airmar()
-        rospy.loginfo("[airmar] Started airmar node!")
-        
-        tm = rospy.get_time()
 
-        while not rospy.is_shutdown():
+        while True:
             am.update_data() # Get the latest data from the airmar
-            if (rospy.get_time() - tm > am.pubInterval):
-                am.airmar_pub(pub, lat_long_pub) # Publish the latest data
-                tm = rospy.get_time()
-
+#            time.sleep(1)
     except Exception as e:
         print e

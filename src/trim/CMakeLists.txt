@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(servo_control)
+project(trim)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -46,7 +46,7 @@ find_package(catkin REQUIRED
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   ServoPos.msg
+   SailPos.msg
  )
 
 ## Generate services in the 'srv' folder

@@ -1,4 +1,3 @@
 The lib directory stories libraries implemented by the InVe team.  It itself is not a ROS node.
 
-Very important that you add the lib directory to your $PYTHONPATH variable.  THIS NEEDS TO
-BE DONE ON THE BBB!!!
+Very important that you add the lib directory to your $PYTHONPATH variable.
