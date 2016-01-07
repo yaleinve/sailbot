@@ -16,11 +16,13 @@ from airmar.msg import AirmarData
 from navigator.msg import TargetCourse
 from captain.msg import LegInfo
 
+#Debugging airmar as steering wheel
+#from servo_control.msg import ServoPos
 
 class Airmar:
   def __init__(self, speedCalculatorInstance):
     #Set the publishing rate of the airmar to 2Hz for now
-    self.pubInterval = 0.5      # Seonds between publishes
+    self.pubInterval = 0.2      # Seconds between publishes
 
     self.heading = 0
     self.amrRoll = 0
@@ -39,6 +41,10 @@ class Airmar:
 
     #Initialize a publisher
     self.pub = rospy.Publisher('/airmar_data', AirmarData, queue_size = 10)
+#   Debugging, turns airmar into steering wheel
+#    self.servoPub = rospy.Publisher('/servo_pos', ServoPos, queue_size = 10)
+
+
 
     #Use mraa to initialize edison pins 0 and 1 to serial
     mraa.Uart(0)
@@ -83,6 +89,13 @@ class Airmar:
 
 
   def airmar_pub(self):
+#    DEBUGGING AIRMAR AS STEERING WHEEL FOR SERVO
+#    debug_msg = ServoPos()
+#    debug_msg.main_angle = 0.0
+#    debug_msg.jib_angle = 0.0
+#    debug_msg.rudder_angle = self.heading - 50 if self.heading < 100 and self.heading >= 0 else 0.0
+#    self.servoPub.publish(debug_msg)
+
     airmar_data_msg = AirmarData()
     airmar_data_msg.heading = self.heading
     airmar_data_msg.amrRoll = self.amrRoll
