@@ -33,7 +33,7 @@ class Airmar:
 
         #Initialize a publisher
         self.pub = rospy.Publisher('/airmar_data', AirmarData, queue_size = 10)
-        
+
         #Use mraa to initialize edison pins 0 and 1 to serial
         mraa.Uart(0)
         #...but, after initialized, let's use the pyserial library
@@ -65,10 +65,10 @@ class Airmar:
                     self.lat = msg.latitude if msg.latitude != None else self.lat
                     self.long = msg.longitude if msg.longitude != None else self.long
                 elif msg.sentence_type == 'XDR' and msg.type == 'A':
-                    self.amrRoll = float(str(msg).split(",")[6]) if str(msg).split(",")[6] != None else self.amrRoll 
+                    self.amrRoll = float(str(msg).split(",")[6]) if str(msg).split(",")[6] != None else self.amrRoll
                     # The pynmea2 library can't parse our XDR messages properly
                     # This basically grabs the roll value manually from the message (it's in a standard form)
-                
+
 
             except Exception, e:
                 rospy.loginfo("[airmar] Error!")
@@ -76,10 +76,7 @@ class Airmar:
 
 
 
-    def airmar_pub(self, pub):
-        '''
-        A publisher that outputs airmar data at a rate of 10Hz
-        '''
+    def airmar_pub(self):
         airmar_data_msg = AirmarData()
         airmar_data_msg.heading = self.heading
         airmar_data_msg.amrRoll = self.amrRoll
@@ -92,7 +89,7 @@ class Airmar:
         airmar_data_msg.lat = self.lat
         airmar_data_msg.long = self.long      #FIXME: does 'long' overwrite a python keyword?
 
-        pub.publish(airmar_data_msg)
+        self.pub.publish(airmar_data_msg)
 
 if __name__ == '__main__':
     try:
@@ -100,13 +97,13 @@ if __name__ == '__main__':
         rospy.init_node('airmar');
         am = Airmar()
         rospy.loginfo("[airmar] Started airmar node!")
-        
+
         tm = rospy.get_time()
 
         while not rospy.is_shutdown():
             am.update_data() # Get the latest data from the airmar
             if (rospy.get_time() - tm > am.pubInterval):
-                am.airmar_pub(pub, lat_long_pub) # Publish the latest data
+                am.airmar_pub() # Publish the latest data
                 tm = rospy.get_time()
 
     except Exception as e:
