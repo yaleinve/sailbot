@@ -2,7 +2,7 @@
 
 
 
-#conclusion that 3 is rudder, 5 is main sail, and 6 is jib for mraa pin numbers 
+#conclusion that 6 is rudder, 5 is main sail, and 3 is jib for mraa pin numbers
 
 import mraa
 import time
@@ -11,14 +11,14 @@ def main():
 
   #Setup
   duty = 0;
-  val = 0;  
-    
+  val = 0;
+
 
 
   #Servo Constants
-  period = 20000
-  duty_min = 1100.0 /period;
-  duty_max = 1900.0 /period;
+  period = 3030.0
+  duty_min = 1000.0 /period;
+  duty_max = 2000.0 /period;
 
   #MRAA setup
 
@@ -31,9 +31,9 @@ def main():
 
   PWM_PIN = 6;    #pwm pins are the same as listed on the breakout board. (3,5,6)
   pwm = mraa.Pwm(PWM_PIN);
-  pwm.period_us(period);   #Period in microseconds, corresponds to 50Hz like the winch motors.
+  pwm.period_us(int(period));   #Period in microseconds, corresponds to 50Hz like the winch motors.
   pwm.enable(True);
-  
+
 
   while True:
     val = input("Enter a duty cycle in [0,1]:  ");
@@ -46,6 +46,6 @@ def main():
     print writeval
     pwm.write(writeval);       #Scale it according to our ranges
 
- 
+
 if __name__ == "__main__":
     main()

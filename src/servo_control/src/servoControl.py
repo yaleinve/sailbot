@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #Eric Anderson						12/15
 #Updates servo_control to reflect new output style for edison
-#using mraa libraryi
+#using mraa library
 
 #IMPORTANT: this code assumes that the winch servos cannot turn past all the way in;
 #that is, to calibrate, simply remove the drum, rotate the drum to all the way trimmed position,
@@ -12,10 +12,12 @@
 import mraa
 import roslib
 import rospy
-
+import math
 import sys
-from servoControl.msg import ServoPos 
+from servo_control.msg import ServoPos
 
+#CONFIG CONSTANTS
+debug = True         #This hijacks the relays so the board is always in 'autonomous' mode
 
 #Ratchet Specifications: This is needed to map sail angles to sheet lengths
 drum_diameter = 1.25  #The internal diameter of the winch drums, in inches             #TODO: measure this
@@ -28,38 +30,64 @@ jib_0_is_duty_max = False
 
 
 #Given Acshi's configuration, use these pins to write to servos
-jib_winch_servo_pin = 6 
+jib_winch_servo_pin = 3
 main_winch_servo_pin = 5
-rudder_servo_pin = 3
+rudder_servo_pin = 6
 
 #Winch servo specs
-winch_period = 20000  # in mircroseconds, corresponds to 50Hz
-winch_duty_min = 1100/winch_period
-winch_duty_max = 1900/winch_period
-winch_degrees = 1260   #Degrees of movement available to servo using these specs
+winch_period = 20000.0  # in mircroseconds, corresponds to 50Hz
+winch_duty_min = 1100.0/winch_period
+winch_duty_max = 1900.0/winch_period
+winch_degrees = 1260.0   #Degrees of movement available to servo using these specs
 
 
 #Rudder servo specs
-rudder_period = 20000 #TODO I'm not 100% sure on this stat but it's a safe bet (most servos work at 50 Hz)
-rudder_duty_min = 1000/rudder_period
-rudder_duty_max = 2000/rudder_period
-rudder_degrees = 100  #Degrees of movement available to servo using these specs
+rudder_period = 3030.0  #This servo is weird, frequency of 330 Hz (top end) needed
+rudder_duty_min = 1000.0/rudder_period
+rudder_duty_max = 2000.0/rudder_period
+rudder_degrees = 100.0  #Degrees of movement available to servo using these specs
+
+#Global pwm pins:
+main_pwm = None
+jib_pwm = None
+rudder_pwm = None
+
+
+def hijack():
+  if debug:
+    AUTONOMOUS_SELECT_PIN = 2   #2 is for rudder, 4 is main/jib
+    auto_select_pin = mraa.Gpio(AUTONOMOUS_SELECT_PIN)
+    auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
+    auto_select_pin.write(1)
+    AUTONOMOUS_SELECT_PIN = 4   #2 is for rudder, 4 is main/jib
+    auto_select_pin = mraa.Gpio(AUTONOMOUS_SELECT_PIN)
+    auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
+    auto_select_pin.write(1)
+
+
 
 #Init the PWM pins
-main_pwm = mraa.Pwm(main_winch_servo_pin)
-jib_pwm = mraa.Pwm(jib_winch_servo_pin)
-rudder_pwm = mraa.Pwm(rudder_servo_pin);
+def initPWMs():
+  #Import Globals
+  global main_pwm
+  global jib_pwm
+  global rudder_pwm
+  main_pwm = mraa.Pwm(main_winch_servo_pin)
+  jib_pwm = mraa.Pwm(jib_winch_servo_pin)
+  rudder_pwm = mraa.Pwm(rudder_servo_pin);
+  main_pwm.period_us(int(winch_period))
+  jib_pwm.period_us(int(winch_period))
+  rudder_pwm.period_us(int(rudder_period))
+  #Enable, but servos won't move until sent a message I think (b/c nothing is written?)
+  main_pwm.enable(True)
+  jib_pwm.enable(True)
+  rudder_pwm.enable(True)
 
-main_pwm.period_us(winch_period)
-jib_pwm.period_us(winch_period)
-rudder.period_us(rudder_period)
-
-#Enable, but servos won't move until sent a message I think (b/c nothing is written?)
-main_pwm.enable(True)
-jib_pwm.enable(True)
-rudder_pwm.enable(True)			
- 
 def rotate(angle):
+  #Import Globals
+  global main_pwm
+  global jib_pwm
+  global rudder_pwm
   #The input to this controller is three angles. For sails, 0 corresponds to all the way in
   #For Rudder, 0 Corresponds to centerline
   main_raw = angle.main_angle   #TODO: this message format is not yet specified
@@ -68,18 +96,18 @@ def rotate(angle):
 
   #Bound the input to our acceptable sail angle range
   if main_raw < 0.00:
-    main_raw = 0.00        
+    main_raw = 0.00
   elif main_raw > 90.00:
     main_raw = 90.0
 
   if jib_raw < 0.00:
-    jib_raw = 0.00        
+    jib_raw = 0.00
   elif jib_raw > 90.00:
     jib_raw = 90.0
 
   #Inputs for rudder should be -50 (hard to port) to 50 (hard to starboard)
   if rudder_raw < -50.00:
-    rudder_raw = -50.00     
+    rudder_raw = -50.00
   elif rudder_raw > 50.00:
     rudder_raw = 50.0
 
@@ -88,7 +116,7 @@ def rotate(angle):
   horizontal_s_main = 2.0*math.sin(main_raw/2.0)*boom_length   #Looking down from above the sheet, boom, and centerline form an isoceles triangle
   tot_s_main = math.sqrt(boom_height*boom_height + horizontal_s_main*horizontal_s_main)
   drum_angle_main = tot_s_main/math.pi/drum_diameter/2.0       #What position we need the drum to be at.  Div by 2 for mechanical advantage
-  
+
   #Duty is set with max trim being duty max or duty min, depending on above booleans
   if main_0_is_duty_max:
      main_duty = winch_duty_max - (drum_angle_main/winch_degrees)*(winch_duty_max - winch_duty_min)
@@ -99,7 +127,7 @@ def rotate(angle):
   horizontal_s_jib = 2.0*math.sin(jib_raw/2.0)*club_length     #Looking down from above the sheet, boom, and centerline form an isoceles triangle
   tot_s_jib = math.sqrt(club_height*club_height + horizontal_s_jib*horizontal_s_jib)
   drum_angle_jib = tot_s_jib/math.pi/drum_diameter/2.0	       #What position we need the drum to be at
-  
+
   #Duty is set with max trim being duty max or duty min, depending on above booleans
   if jib_0_is_duty_max:
     jib_duty = winch_duty_max - (drum_angle_jib/winch_degrees)*(winch_duty_max - winch_duty_min)
@@ -108,7 +136,7 @@ def rotate(angle):
 
 
   #Rudder is simpler, just look at delta from center
-  rudder_duty = rudder_duty_min + 0.5(rudder_duty_max-rudder_duty_min) + rudder_raw/rudder_degrees * (rudder_duty_max-rudder_duty_min)
+  rudder_duty = rudder_duty_min + 0.5*(rudder_duty_max-rudder_duty_min) + rudder_raw/rudder_degrees * (rudder_duty_max-rudder_duty_min)
 
   #Send pwm signals
   main_pwm.write(main_duty)
@@ -118,8 +146,13 @@ def rotate(angle):
 def listener():
   rospy.init_node("servo_control")
   rospy.Subscriber("/servo_pos", ServoPos, rotate)
-  rospy.spin() 
+  rospy.spin()
 
 if __name__ == "__main__":
   rospy.loginfo("initialize servo node")
+  initPWMs()
+  rospy.loginfo("debug mode set to: " + str(debug))
+  #Hijack sevo control?
+  if debug:
+    hijack()
   listener()
