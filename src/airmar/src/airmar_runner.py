@@ -96,9 +96,9 @@ class Airmar:
     airmar_data_msg.long = self.long      #FIXME: does 'long' overwrite a python keyword?
 
     #Calculated in speed calculator
-    #airmar_data_msg.VMG = 0.0#self.spd.calc_VMG(self.sog, self.cog)
-    #airmar_data_msg.VMGup  = 0.0#self.spd.calc_VMGup(self.sog,self.cog,self.truWndDir)
-    #airmar_data_msg.xte = 0.0#self.spd.calc_xte()
+    airmar_data_msg.VMG = self.spd.calc_VMG(float(self.sog), float(self.cog))
+    airmar_data_msg.VMGup  = self.spd.calc_VMGup(float(self.sog),float(self.cog),float(self.truWndDir))
+    airmar_data_msg.XTE = self.spd.calc_xte()
 
     self.pub.publish(airmar_data_msg)
 

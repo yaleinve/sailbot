@@ -10,4 +10,4 @@ float64               lat
 float64               long
 float64               XTE
 float64               VMG
-float64               XTE
+float64               VMGup
