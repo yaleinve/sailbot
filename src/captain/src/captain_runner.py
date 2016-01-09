@@ -9,6 +9,7 @@ import rospy
 import sys
 import Queue
 
+from compassCalc import *
 from gpsCalc import *    #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from captain.msg import CompetitionInfo      #User input
@@ -36,6 +37,12 @@ class Captain():
         self.currentLat = 0.0      # From the airmar
         self.currentLong = 0.0
         self.truWndDir = 0.0
+
+        #Autonomous pins from RC
+        self.autonomousPin = mraa.Aio(3)  #TODO: correct pin number for aux 1?
+        self.auxVoltDivide = 500          #TODO: empirically measure this!
+        self.currentlyAutonomous = False  #Default into manual on boot (so if in manual during startup we don't lose control)
+
 
         # Our publisher for leg data to the navigator
         self.pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
@@ -75,6 +82,7 @@ class Captain():
         leg_info.end_long = self.current_target_waypoint.wlong
         leg_info.xte_min = self.current_target_waypoint.xteMin
         leg_info.xte_max = self.current_target_waypoint.xteMax
+        leg_info.currentlyAutonomous = int(self.currentlyAutonomous)
         self.pub_leg.publish(leg_info)
 
     #Updates the state variables if we have completed a leg or rerouted
@@ -185,17 +193,44 @@ class Captain():
             self.legQueue.put(w5)
 
         #####   STATION KEEPING #########
-
+        #40m square box, square to the wind.  Stay in the box for five minutes, then exit the box
+        #Input: lat/long of box corners in following order: nw, sw, se, ne (relative to wind)
+        #Alg sketch: sail a narrow corridor to the middle of the box laterally, 2/3 upwind
         elif self.compMode == "StationKeeping":       #Stay within box created by 4 gps points
-            pass # Complicated alg, to define later
+            #Bearing west to east in box
+            wToEBrng = (gpsBearing(self.gpsLat1, self.gpsLong1,self.gpsLat4,self.gpsLong4) +  gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat3,self.gpsLong3))/2.0
+            sToNBrng = (gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat1,self.gpsLong1) +  gpsBearing(self.gpsLat3, self.gpsLong3,self.gpsLat4,self.gpsLong4))/2.0
+            center = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (wToEBrng - compassDiff(wToEBrng,sToNBrng)/2)%360 , math.sqrt(2*40*40)/2)  #Follow a diagonal, more or less
+            #West location
+            loc1 = gpsVectorOffset(center[0],center[1],(wToEBrng-180)%360, 12)
+            #East location
+            loc2 = gpsVectorOffset(center[0],center[1],wToEBrng,12)
+            #Add these locations to the queue over and over and over
+            w1 = Waypoint(loc1[0],loc1[1],self.xteMin,self.xteMax)
+            w1.logWaypoint()
+            w2 = Waypoint(loc2[0],loc2[1],self.xteMin,self.xteMax)
+            w2.logWaypoint()
+            #Add endless queue of back and forth
+            for i in range(1000):
+                self.legQueue.put(w1)
+                self.legQueue.put(w2)
 
-        #####  WAIT   ###################
+        #####  ILLEGAL INPUT  ###################
 
         else:
             self.compMode = "Wait"        #If invalid input, do nothing
 
+       #Let's kick things off!
         self.checkLeg()
 
+    def checkAutonomous(self):
+        #TODO: might want to switch these- consider case when controller is turned off.  We want to default to autonomous, right?
+        if (self.autonomousPin.read() > self.auxVoltDivide):
+            self.currentlyAutonomous = False
+        else:
+            if self.currentlyAutonomous = False:   #If we just switched into autonomous mode, we might want to do something special
+                pass                               #TODO: what do we want to do here?
+            self.currentlyAutonomous = True
 
     def airmar_callback(self,data):
         self.truWndDir = data.truWndDir
@@ -239,9 +274,10 @@ class Captain():
 
         #Infinite Loop
         while not rospy.is_shutdown():
+            self.checkAutonomous()
             self.checkLeg() # Checks to see if we've arrived at our target yet
             # Note that self.cautious is set by checkLeg()!
-            if self.cautious or self.compMode == "MaintainPointOfSail":
+            if self.cautious or self.compMode == "MaintainPointOfSail" or self.compMode == "MaintainHeading":
                 cautious_checkleg_rate.sleep()
             else:
                 normal_checkleg_rate.sleep()
