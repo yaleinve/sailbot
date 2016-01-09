@@ -9,7 +9,7 @@ import rospy
 import sys
 import Queue
 
-import gpsCalc      #import all the gps functions
+from gpsCalc import *    #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from captain.msg import CompetitionInfo      #User input
 from std_msgs.msg import Bool                #The bool for manual mode
@@ -82,13 +82,13 @@ class Captain():
         if not self.compMode == "Wait":    #If "wait" to have nonzero functionality, this logic block must change
             #If no current waypoint OR this is our very first leg for the given competition mode
             if self.current_target_waypoint == None or self.current_target_waypoint == -1:
-                rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
                 if self.legQueue.empty():  #If no next waypoint
+                    rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
                     self.compMode = "Wait" #Go into wait mode, exit
                     self.loadLegQueue()
                     return
                 else:                      #Move on to next leg, pull waypoint, start leg
-                   rospy.loginfo("[captain] Moving on to next waypoint")
+                   rospy.loginfo("[captain] Loading next (possibly first) waypoint")
                    self.beginLat = self.currentLat       #From where we currently are
                    self.beginLong = self.currentLong
                    self.current_target_waypoint = self.legQueue.get()
@@ -97,6 +97,9 @@ class Captain():
 
             else:                          #If we have a waypoint
                 d = gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
+                rospy.loginfo("[captain] in checkLeg, distance to waypoint calc'ed as : " + str(d))
+                rospy.loginfo("[captain] legArrival Tol is " + str(self.legArrivalTol))
+                rospy.loginfo("[captain] d < tol: " + str(d < self.legArrivalTol))
                 self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
                 if d < self.legArrivalTol:                                 # Have we "arrived"?
                     self.current_target_waypoint = -1                      # If so, wipe current waypoint
@@ -198,6 +201,7 @@ class Captain():
         self.truWndDir = data.truWndDir
         self.currentLat = data.lat
         self.currentLong = data.long
+        rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
 
     #Every time new competition info comes in, we must re-route everything
     def competition_info_callback(self,data):
