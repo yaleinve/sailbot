@@ -3,32 +3,31 @@
 #Implements the captain node as described in the  specs
 #Andrew Malta 4/17/15 - fixing things
 
-#TO DO: Implement StationKeeping
-
 import time
 import roslib
 import rospy
 import sys
 import Queue
 
-from gpsCalc import *      #import all the gps functions
+import gpsCalc      #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
-from speed_calculator.msg import SpeedStats  #For truWndDir
 from captain.msg import CompetitionInfo      #User input
-from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import Bool                #The bool for manual mode
-#FIXME need to add an import for the gps node!
+from airmar.msg import AirmarData
+
 
 class Waypoint():
     def __init__(self, wlat,wlong,xteMin,xteMax):
         self.wlat = wlat if abs(wlat) <=90.0 else 0.0
         self.wlong = wlong if abs(wlong) <= 180.0 else 0.0
-        self.xteMin = xteMin if xteMin <= -1.0 else -100.0
-        self.xteMax = xteMax if xteMax >= 1.0 else 100.0
+        self.xteMin = xteMin if xteMin <= -1.0 else -100.0 #This is the xte tolerance on the way to the waypoint from current destination
+        self.xteMax = xteMax if xteMax >= 1.0 else 100.0   #(cont'd) we require at least a 2m wide corridor (the boat is about 2m!)
     def logWaypoint(self):
         rospy.loginfo('[captain] waypoint')
         rospy.loginfo('    lat: ' + str(self.wlat)+ ', long: ' + str(self.wlong))
         rospy.loginfo('    xtemin: ' + str(self.xteMin) + ', xteMax: ' + str(self.xteMax))
+
+
 class Captain():
     #Internal State
 
@@ -36,9 +35,6 @@ class Captain():
         #====== Default values on initialization ======#
         self.currentLat = 0.0      # From the airmar
         self.currentLong = 0.0
-#        self.apWndSpd = 0.0       #Don't need any of these fields for captain
-#        self.apWndDir = 0.0
-#        self.truWndSpd = 0.0
         self.truWndDir = 0.0
 
         # Our publisher for leg data to the navigator
@@ -54,7 +50,7 @@ class Captain():
                                    # - StationKeeping
 
 
-        self.legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints
+        self.legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints, no max size
         self.beginLat = 0.0
         self.beginLong = 0.0
 
@@ -65,12 +61,12 @@ class Captain():
 
         #CONSTANTS
         self.legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived"
-        self.cautious = False    #~~Must be empirically determined, set to 2.0m for now
+        self.cautious = False
         self.cautiousDistance = 30.0   #How far away from waypoint to we start being cautious
-        self.timeSinceLastCheck = -1 # Used in Airmar callback
+        self.timeSinceLastCheck = -1   #Used in Airmar callback
 
     def publish_captain(self):
-        rospy.loginfo("[captain] I'm in pub!!!!")
+        #rospy.loginfo("[captain] I'm in pub!!!!")
         leg_info = LegInfo()
         #Invariant: end != None (b/c nec called from checkLeg())
         leg_info.begin_lat = self.beginLat
@@ -83,31 +79,30 @@ class Captain():
         self.pub_leg.publish(leg_info)
 
 
-    #Eric rewrote checkLeg() to eliminate logic bug on May 6 2015
     #Updates the state variables if we have completed a leg or rerouted
     def checkLeg(self):
         if not self.compMode == "Wait":    #If "wait" to have nonzero functionality, this logic block must change
              #If no current waypoint OR this is our very first leg for the given competition mode
             if self.current_target_waypoint == None or self.current_target_waypoint == -1:
-                rospy.loginfo("[captain] I'm in here!!!")
+                rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
                 if self.legQueue.empty():  #If no next waypoint
                     self.compMode = "Wait" #Go into wait mode, exit
                     self.loadLegQueue()
                     return
                 else:                      #Move on to next leg, pull waypoint, start leg
-                   rospy.loginfo("[captain] I've got new latlon coords!")
-                   self.beginLat = self.currentLat       #From where we currently
+                   rospy.loginfo("[captain] Moving on to next waypoint")
+                   self.beginLat = self.currentLat       #From where we currently are
                    self.beginLong = self.currentLong
                    self.current_target_waypoint = self.legQueue.get()
                    self.publish_captain()
                    rospy.loginfo("[captain] Just  published  leg info!")
 
-            else:                          #If we have a current destination
+            else:                          #If we have a waypoint
                 d = gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
                 self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
                 if d < self.legArrivalTol:                                 # Have we "arrived"?
                     self.current_target_waypoint = -1                      # If so, wipe current waypoint
-                    self.checkLeg()                                             # This recursion is only ever 1 deep
+                    self.checkLeg()                                        # This recursion is only ever 1 deep
         rospy.loginfo("[captain] Checked leg!")
 
 
@@ -115,9 +110,9 @@ class Captain():
     def loadLegQueue(self):
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
         self.current_target_waypoint = None                         #We are starting over
-        if self.compMode == "Wait":                 #Stay in the same place so we can get there 
+        if self.compMode == "Wait":                 #Stay in the same place so we can get there
         # TODO: Wait mode should tell the navigator to quit its latest goal,
-        # and possibly let out the sheets / turn the rudder so we move as 
+        # and possibly let out the sheets / turn the rudder so we move as
         # little as possible
             pass
         elif self.compMode == "SailToPoint":          #Sail to a gps target
@@ -142,11 +137,11 @@ class Captain():
             loc4 = (self.gpsLat2,self.gpsLong2)
             w1 = Waypoint(loc1[0],loc1[1],self.xteMin,self.xteMax)
             w1.logWaypoint()
-            w2 = Waypoint(loc2[0],loc2[1],-2.0,50.0) 
-            w2.logWaypoint() 
-            w3 = Waypoint(loc3[0],loc3[1],-2.0,50.0) 
-            w3.logWaypoint() 
-            w4 = Waypoint(loc4[0],loc4[1],self.xteMin,self.xteMax) 
+            w2 = Waypoint(loc2[0],loc2[1],-2.0,50.0)
+            w2.logWaypoint()
+            w3 = Waypoint(loc3[0],loc3[1],-2.0,50.0)
+            w3.logWaypoint()
+            w4 = Waypoint(loc4[0],loc4[1],self.xteMin,self.xteMax)
             w4.logWaypoint()
             self.legQueue.put(w1)        #Load in the legs
             self.legQueue.put(w2)        #Different xte reqs for the
