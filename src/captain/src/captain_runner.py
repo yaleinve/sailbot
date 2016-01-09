@@ -3,8 +3,6 @@
 #Implements the captain node as described in the  specs
 #Andrew Malta 4/17/15 - fixing things
 
-#TO DO: Implement StationKeeping
-
 import time
 import roslib
 import rospy
@@ -63,7 +61,7 @@ class Captain():
 
 
         #CONSTANTS
-        self.legArrivalTol = 2.0 #How close do we have to  get to waypoint to have "arrived." 2.0m for now
+        self.legArrivalTol = 1.0 #How close do we have to  get to waypoint to have "arrived." 1.0m for now
         self.cautious = False
         self.cautiousDistance = 30.0   #How far away from waypoint to we start being cautious
 
@@ -145,13 +143,28 @@ class Captain():
         #   COMPETITION MODES              #
         #==================================#
 
-        #TODO what competition is this exactly?
+        ####  NAVIGATION TEST  #########
+        # Sail through a start line, round a mark to port, sail back down through start line
+        # Wdwd mark is approx 60m upwind
+        # Competition ends when cross finish line (or extensions).  Penalties dep on how where on extension you cross
+        # Line is 3m wide (!!)
+        # Human input: gps 1 is wdwd mark, gps 2 is left start mark (the pin), gps 3 is right start mark (the boat)
+        # Alg sketch: start, sail diamond around mark, sail to x meters above line, sail straight down through
+
         elif self.compMode == "RoundAndReturn":       #Round a mark at gps1 and return to gps2
             brng = gpsBearing(self.currentLat,self.currentLong,self.gpsLat1,self.gpsLong1)
+            #Diamond around mark 1
             loc1 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng+90)%360, 7.0) #Pts define diamond
             loc2 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng)%360, 7.0)    #Around gps1
             loc3 = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (brng-90)%360, 7.0)
-            loc4 = (self.gpsLat2,self.gpsLong2)
+            #Explicitly cross the line perpendicularly
+            #First, calculate center of line:
+            lToRBearing = gpsBearing(self.gpsLat2,self.gpsLong2, self.gpsLat3,self.gpsLong3)
+            lToRDistance = gpsDistance(self.gpsLat2,self.gpsLong2, self.gpsLat3,self.gpsLong3)
+            centerLoc = gpsVectorOffset(self.gpsLat2,self.gpsLong2,lToRBearing, lToRDistance/2)
+            loc4 = gpsVectorOffset(centerLoc[0],centerLoc[1], (lToRBearing-90)%360, 5.0)
+            loc5 = gpsVectorOffset(centerLoc[0],centerLoc[1], (lToRBearing+90)%360, 5.0)            
+
             w1 = Waypoint(loc1[0],loc1[1],self.xteMin,self.xteMax)
             w1.logWaypoint()
             w2 = Waypoint(loc2[0],loc2[1],-2.0,50.0) 
@@ -160,13 +173,21 @@ class Captain():
             w3.logWaypoint() 
             w4 = Waypoint(loc4[0],loc4[1],self.xteMin,self.xteMax) 
             w4.logWaypoint()
+            w5 = Waypoint(loc5[0],loc5[1],-1,1)  #The final leg has very low xte tolerance so we actually cross the correct line
+            w5.logWaypoint()
             self.legQueue.put(w1)        #Load in the legs
             self.legQueue.put(w2)        #Different xte reqs for the
             self.legQueue.put(w3)        #Short legs
             self.legQueue.put(w4)
+            self.legQueue.put(w5)
+
+        #####   STATION KEEPING #########
 
         elif self.compMode == "StationKeeping":       #Stay within box created by 4 gps points
             pass # Complicated alg, to define later
+
+        #####  WAIT   ###################
+
         else:
             self.compMode = "Wait"        #If invalid input, do nothing
 
