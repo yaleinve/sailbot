@@ -1,0 +1,4 @@
+float64 targetCourse
+float64 targetRange
+float64 targetHeading
+string pointOfSail

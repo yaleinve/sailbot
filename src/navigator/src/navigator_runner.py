@@ -3,13 +3,11 @@ import time
 import roslib
 import rospy
 import sys
-from math import radians, cos, sin, asin, sqrt, atan2, degrees
 
 from gpsCalc import *              #import all gps functions
 from captain.msg import LegInfo
 from airmar.msg import AirmarData
 from navigator.msg import TargetCourse
-from sensor_msgs.msg import NavSatFix
 
 begin_lat = 0.0
 begin_long = 0.0
@@ -43,9 +41,7 @@ def leg_info_callback(data):
 
 def listener():
   rospy.init_node("navigator")
-  rospy.Subscriber("fix", NavSatFix, gps_info_callback)
   rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
-  
   rospy.spin()
 
 

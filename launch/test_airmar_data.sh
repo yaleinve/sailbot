@@ -1,2 +1,2 @@
 #!/bin/bash
-rostopic pub /airmar_data airmar/AirmarData '{lat: 19.999923649076784, long: 20.00017321215097, truWndDir: 225, heading: 0.0}'
+rostopic pub /airmar_data airmar/AirmarData '{lat: 0.0, long: -1.0, truWndDir: 0.0, heading: 190.0}'
