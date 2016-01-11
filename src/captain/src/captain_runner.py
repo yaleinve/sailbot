@@ -8,11 +8,14 @@ import roslib
 import rospy
 import sys
 import Queue
+import mraa
+import math
 
 from compassCalc import *
 from gpsCalc import *    #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from captain.msg import CompetitionInfo      #User input
+from captain.msg import AutonomousStatus
 from std_msgs.msg import Bool                #The bool for manual mode
 from airmar.msg import AirmarData
 
@@ -37,15 +40,23 @@ class Captain():
         self.currentLat = 0.0      # From the airmar
         self.currentLong = 0.0
         self.truWndDir = 0.0
+        self.currentHeading = 0.0
 
         #Autonomous pins from RC
-        self.autonomousPin = mraa.Aio(3)  #TODO: correct pin number for aux 1?
-        self.auxVoltDivide = 500          #TODO: empirically measure this!
+        self.autonomousPin = mraa.Aio(1)  #The analog pin number for aux 1
+        self.auxVoltDivide = 400          #TODO: empirically measure this!
         self.currentlyAutonomous = False  #Default into manual on boot (so if in manual during startup we don't lose control)
+
+        #Relay pins
+        self.sailRelayPin =  mraa.Gpio(4)    #Pin 4 is sail relays
+        self.sailRelayPin.dir(mraa.DIR_OUT)
+        self.rudderRelayPin = mraa.Gpio(2)   #Pin 2 is rudder relay
+        self.rudderRelayPin.dir(mraa.DIR_OUT)
 
 
         # Our publisher for leg data to the navigator
         self.pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
+        self.pub_autonomous = rospy.Publisher("/autonomous_status", AutonomousStatus, queue_size = 10)
 
         #Default into wait mode
         self.compMode = "Wait"     # From competition_info
@@ -61,20 +72,22 @@ class Captain():
         self.legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints, no max size
         self.beginLat = 0.0
         self.beginLong = 0.0
+        self.taskBeginTime = -1.0    #For timed legs...
 
         #The end waypoint for this leg
         self.current_target_waypoint = -1
 
 
         #CONSTANTS
-        self.legArrivalTol = 1.0 #How close do we have to  get to waypoint to have "arrived." 1.0m for now
+        self.legArrivalTol = 1.0       #How close do we have to  get to waypoint to have "arrived." 1.0m for now
         self.cautious = False
         self.cautiousDistance = 30.0   #How far away from waypoint to we start being cautious
 
     def publish_captain(self):
         #rospy.loginfo("[captain] I'm in pub!!!!")
+        if self.current_target_waypoint == None or self.current_target_waypoint == -1:
+            return
         leg_info = LegInfo()
-        #Invariant: end waypoint != None (b/c nec called from checkLeg())
         leg_info.begin_lat = self.beginLat
         leg_info.begin_long = self.beginLong
         leg_info.leg_course = gpsBearing(self.beginLat, self.beginLong, self.current_target_waypoint.wlat, self.current_target_waypoint.wlong)
@@ -82,45 +95,86 @@ class Captain():
         leg_info.end_long = self.current_target_waypoint.wlong
         leg_info.xte_min = self.current_target_waypoint.xteMin
         leg_info.xte_max = self.current_target_waypoint.xteMax
-        leg_info.currentlyAutonomous = int(self.currentlyAutonomous)
         self.pub_leg.publish(leg_info)
 
-    #Updates the state variables if we have completed a leg or rerouted
-    def checkLeg(self):
-        if not self.compMode == "Wait":    #If "wait" to have nonzero functionality, this logic block must change
-            #If no current waypoint OR this is our very first leg for the given competition mode
-            if self.current_target_waypoint == None or self.current_target_waypoint == -1:
-                if self.legQueue.empty():  #If no next waypoint
-                    rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
-                    self.compMode = "Wait" #Go into wait mode, exit
-                    self.loadLegQueue()
-                    return
-                else:                      #Move on to next leg, pull waypoint, start leg
-                   rospy.loginfo("[captain] Loading next (possibly first) waypoint")
-                   self.beginLat = self.currentLat       #From where we currently are
-                   self.beginLong = self.currentLong
-                   self.current_target_waypoint = self.legQueue.get()
-                   self.publish_captain()
-                   rospy.loginfo("[captain] Just  published  leg info!")
+    #Publish our autonomous/manual state
+    def publish_autonomous(self):
+        msg = AutonomousStatus()
+        msg.currentlyAutonomous = self.currentlyAutonomous
+        self.pub_autonomous.publish(msg)
 
-            else:                          #If we have a waypoint
-                d = gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
-                rospy.loginfo("[captain] in checkLeg, distance to waypoint calc'ed as : " + str(d))
-                rospy.loginfo("[captain] legArrival Tol is " + str(self.legArrivalTol))
-                rospy.loginfo("[captain] d < tol: " + str(d < self.legArrivalTol))
-                self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
-                if d < self.legArrivalTol:                                 # Have we "arrived"?
-                    self.current_target_waypoint = -1                      # If so, wipe current waypoint
-                    self.checkLeg()                                        # This recursion is only ever 1 deep
+    #Do some checks and pull the next waypoint out of the queue
+    def getNextWaypoint(self):
+        if self.legQueue.empty():  #If no next waypoint
+            rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
+            self.compMode = "Wait" #Go into wait mode, exit
+            self.loadLegQueue()
+        else:                      #Move on to next leg, pull waypoint, start leg
+            rospy.loginfo("[captain] Popping Waypoint from Queue")
+            self.beginLat = self.currentLat       #From where we currently are
+            self.beginLong = self.currentLong
+            self.current_target_waypoint = self.legQueue.get()
+            self.publish_captain()
+            rospy.loginfo("[captain] Just  published  leg info!")
+
+
+
+
+    '''
+    Updates the state variables if we have completed a leg or rerouted
+    Note that, even though loadLegQueue can call checkLeg and checkLeg can call loadLegQueue,
+    we shouldn't be at risk of infinite recursion based on the logic (mode in checkLeg is set to
+    wait if loadLegQueue is called, which means the next checkLeg call is a no-op
+    '''
+    def checkLeg(self):
+        stationKeepingTaskDuration = 5 #300  #Five minutes in the box
+
+        #============================#
+        #  MODE SPECIFIC CHECKS      #
+        #============================#
+
+        #Skip everything for wait   #TODO: change this?
+        if self.compMode == "Wait":
+            return
+
+        if self.compMode == "StationKeeping":
+            #Time to exit the box?
+            if self.taskBeginTime > 0.0 and rospy.get_time() - self.taskBeginTime >= stationKeepingTaskDuration:
+                #TODO: improve this really crappy "sail out of the box by going straight" algorithm
+                self.compMode = "MaintainHeading"
+                self.angle = self.currentHeading
+                self.loadLegQueue()
+                return                     #Return here, simplifies control flow (no deep recursion with nearby waypoints), just let main loop run again
+
+        #============================#
+        #  GENERIC CHECK             #
+        #============================#
+
+        #Do we need a new waypoint?
+        if self.current_target_waypoint == None or self.current_target_waypoint == -1:
+            self.getNextWaypoint()
+            return
+        #If we have a waypoint, how far away are we from it?
+        else:
+            d = gpsDistance(self.currentLat,self.currentLong,self.current_target_waypoint.wlat,self.current_target_waypoint.wlong)  #Distance to waypoint
+            #rospy.loginfo("[captain] in checkLeg, distance to waypoint calc'ed as : " + str(d))
+            #rospy.loginfo("[captain] legArrival Tol is " + str(self.legArrivalTol))
+            #rospy.loginfo("[captain] d < tol: " + str(d < self.legArrivalTol))
+            self.cautious = (d < self.cautiousDistance)                # True if we should start polling more quickly
+            if d < self.legArrivalTol:                                 # Have we "arrived"?
+                self.current_target_waypoint = -1                      # If so, wipe current waypoint
+                self.checkLeg()                                        # This recursion is only ever 3 deep (checkleg, loadLegQueue, checkleg (which is now in wait mode) )
+
+
 
     #Loads the leg Queue with appropriate legs given competition_info messages
-    #ALGORITHMS
+    # TASK ALGORITHMS GO IN HERE!!!!!
     def loadLegQueue(self):
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
         self.current_target_waypoint = None                         #We are starting over
 
         #==================================#
-        #   DEBUGGING MODES                #
+        #   DEBUGGING / BASIC MODES        #
         #==================================#
 
         #Wait mode
@@ -200,17 +254,20 @@ class Captain():
             #Bearing west to east in box
             wToEBrng = (gpsBearing(self.gpsLat1, self.gpsLong1,self.gpsLat4,self.gpsLong4) +  gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat3,self.gpsLong3))/2.0
             sToNBrng = (gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat1,self.gpsLong1) +  gpsBearing(self.gpsLat3, self.gpsLong3,self.gpsLat4,self.gpsLong4))/2.0
-            center = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (wToEBrng - compassDiff(wToEBrng,sToNBrng)/2)%360 , math.sqrt(2*40*40)/2)  #Follow a diagonal, more or less
+            center = gpsVectorOffset(self.gpsLat1,self.gpsLong1, (wToEBrng - compass_diff(wToEBrng,sToNBrng)/2)%360 , math.sqrt(2*40*40)/2)  #Follow a diagonal, more or less
             #West location
             loc1 = gpsVectorOffset(center[0],center[1],(wToEBrng-180)%360, 12)
             #East location
             loc2 = gpsVectorOffset(center[0],center[1],wToEBrng,12)
             #Add these locations to the queue over and over and over
+            w_center = Waypoint(center[0], center[1], -5.0, 5.0)       #We're going to the center, first, so we don't mess up at the beginning
+            w_center.logWaypoint()
             w1 = Waypoint(loc1[0],loc1[1],self.xteMin,self.xteMax)
             w1.logWaypoint()
             w2 = Waypoint(loc2[0],loc2[1],self.xteMin,self.xteMax)
             w2.logWaypoint()
-            #Add endless queue of back and forth
+            #Add endless queue of back and forth after one center point
+            self.legQueue.put(w_center)
             for i in range(1000):
                 self.legQueue.put(w1)
                 self.legQueue.put(w2)
@@ -223,19 +280,41 @@ class Captain():
        #Let's kick things off!
         self.checkLeg()
 
+
+    #Reads the aux inputs, switches relays and republishes leg info accordingly
+    #Note that thi may call publish_captain() before a waypoint has been pulled off the queue,
+    #So publish_captain has to handle that case
     def checkAutonomous(self):
         #TODO: might want to switch these- consider case when controller is turned off.  We want to default to autonomous, right?
-        if (self.autonomousPin.read() > self.auxVoltDivide):
-            self.currentlyAutonomous = False
+        #Manual Mode
+        if (self.autonomousPin.read() < self.auxVoltDivide):
+            #If we just switched modes
+            if self.currentlyAutonomous == True:
+                rospy.loginfo('[captain] switching into manual mode')
+                self.currentlyAutonomous = False
+                #self.rudderRelayPin.write(0)
+                #self.sailRelayPin.write(0)
+                self.publish_autonomous()
+        #Autonomous mode
         else:
-            if self.currentlyAutonomous = False:   #If we just switched into autonomous mode, we might want to do something special
-                pass                               #TODO: what do we want to do here?
-            self.currentlyAutonomous = True
+            #If we just switched modes
+            if self.currentlyAutonomous == False:
+                rospy.loginfo('[captain] Switching into autonomous mode')
+                self.currentlyAutonomous = True
+                #self.rudderRelayPin.write(1)
+                #self.sailRelayPin.write(1)
+                self.publish_autonomous()
+
+                #For station keeping, we'll start the five minute timer when we go into autonomous mode
+                if self.compMode == 'StationKeeping':
+                    self.taskBeginTime = rospy.get_time()
+                    rospy.loginfo('[captain] StationKeeping start time recorded as : ' + str(self.taskBeginTime))
 
     def airmar_callback(self,data):
         self.truWndDir = data.truWndDir
         self.currentLat = data.lat
         self.currentLong = data.long
+        self.currentHeading = data.heading
         rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
 
     #Every time new competition info comes in, we must re-route everything
@@ -274,8 +353,8 @@ class Captain():
 
         #Infinite Loop
         while not rospy.is_shutdown():
-            self.checkAutonomous()
-            self.checkLeg() # Checks to see if we've arrived at our target yet
+            self.checkLeg()  # Checks to see if we've arrived at our target yet
+            self.checkAutonomous()  #Because this is called immediately after checkLeg, publishing invariant is maintained
             # Note that self.cautious is set by checkLeg()!
             if self.cautious or self.compMode == "MaintainPointOfSail" or self.compMode == "MaintainHeading":
                 cautious_checkleg_rate.sleep()

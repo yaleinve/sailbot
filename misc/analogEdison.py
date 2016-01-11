@@ -33,7 +33,7 @@ def main():
 
 
   #Analog config
-  ANALOG_PIN = 0
+  ANALOG_PIN = 1
   aio = mraa.Aio(ANALOG_PIN)
 
 
@@ -46,9 +46,11 @@ def main():
     duty = val;
     writeval = (duty_min + (duty_max-duty_min)*duty)
     print writeval
+    aval = aio.read()
     pwm.write(writeval);       #Scale it according to our ranges
 
-    print('value from analaog ' + str(ANALOG_PIN) + ": " + str(aio.read()/1024.0 * 5.0))
+    print('value from analaog ' + str(ANALOG_PIN) + ": " + str(aval))
+    print('equivalent to ' + str(aio.read()/1024.0 * 5.0) + ' volts')
 
 
 if __name__ == "__main__":

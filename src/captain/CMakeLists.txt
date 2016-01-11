@@ -48,7 +48,8 @@ find_package(catkin REQUIRED
    FILES
    LegInfo.msg
    CompetitionInfo.msg
- )
+   AutonomousStatus.msg
+   )
 
 ## Generate services in the 'srv' folder
 # add_service_files(

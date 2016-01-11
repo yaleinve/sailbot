@@ -10,3 +10,4 @@ float64 gps_lat3
 float64 gps_long3
 float64 gps_lat4
 float64 gps_long4
+bool    currently_autonomous
