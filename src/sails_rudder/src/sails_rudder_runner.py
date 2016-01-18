@@ -17,7 +17,7 @@ import time
 
 #Import message types
 from airmar.msg import AirmarData #Read from
-from tactics.msg import TargetHeading
+from tactics.msg import NavTargets
 from sails_rudder.msg import SailsRudderPos #Write to
 
 # linear interpolation of x in range from minX to maxX
