@@ -67,10 +67,12 @@ class SailsRudder():
 
         self.maxTurnOffset = 25.0 # The angle away from extremes that maximizes turning with the sails
         self.rudderRange = 60.0 # The maximum angle the rudder can be turned in either direction off straight
-        self.highTurnAngle = 30.0 # The angle against the velocity which will maximize turning
+        self.highTurnAngle = 30.0 # The angle against the velocity which will maximize turning, rough model of stall angle
         self.minClosedAngle = 25.0 # If both main and jib are closed more than this, jib is held at this angle
 
         # PID control of rudder for course correction
+        '''FIXME don't have a constant control interval. What if airmar fails to update?  What if update gets blocked in queue?  What if
+           we get a targetHeading update at some random time interval (the tactics callback also calls update position!'''
         self.controlInterval = 0.1 # time in seconds between updates to rudder/sail headings
         self.previousInput = 0.0
         # control coefficients, these may be a good start, but need to be empiracally determined for Racht
@@ -101,17 +103,18 @@ class SailsRudder():
         self.updatePositions()
         
     def airmar_callback(self, data):
-        #TODO: is airmar apWndDir relative to the boat or absolute?
-        #If Absolute:
-        #windAngle = compass_diff(data.apWndDir, data.heading)
-        #If relative
         self.apparentWindDirection = data.apWndDir
         self.trueWindDirection = data.truWndDir
-        self.velocityDirection = data.cog # compass over ground
+        self.velocityDirection = data.cog # course over ground
         self.boatHeading = data.heading
         self.updatePositions()
         
     def updatePositions(self):
+
+        ################################
+        #    RUDDER CONTROL            #
+        ################################
+
         # Calculate the limits of PID output values
         
         # Use the lower-bound of the rudder as a reference point 0.
@@ -120,6 +123,7 @@ class SailsRudder():
         
         # The angles of the rudder most effective at effecting rotation
         # are those that are at highTurnAngle to the velocity of the boat
+        # n.b. velocityDirection is cog
         optimalTurnLeft = coerceAngleToRange((self.velocityDirection - self.highTurnAngle) - (self.boatHeading - 180) + self.rudderRange, 0, 360)
         optimalTurnRight = coerceAngleToRange((self.velocityDirection + self.highTurnAngle) - (self.boatHeading + 180) + self.rudderRange, -360, 0)
         turningCenter = (optimalTurnLeft + optimalTurnRight) / 2.0
@@ -131,7 +135,7 @@ class SailsRudder():
         
         # Calculate maximum and minimum PID output values currently realizable with our rudder
         # This varies over time as the boat's orientation and velocity and the wind vary
-        # Note that positive PID values are negative to indicate to turn left, and positive for right
+        # Note that positive PID values are negative to indicate to turn left, and positive for right   #FIXME I don't understand this comment... remove first instance of 'positive' ?.
         # But the rudder direction angles are high(positive) for left and low(negative) for right
         pidLeftLimit = lerp(turnLeftDirection, 0.0, 2 * self.rudderRange, 100, -100)
         pidRightLimit = lerp(turnRightDirection, 0.0, 2 * self.rudderRange, 100, -100)
@@ -183,7 +187,12 @@ class SailsRudder():
                 constrainedPidValue = max(min(pidOutputValue, pidLeftLimit), pidRightLimit)
             rudderPos = lerp(constrainedPidValue, -100, 100, turnRightDirection, turnLeftDirection)
         rudderPos = coerceAngleToRange(rudderPos - rudderRange, -180, 180)
-        
+       
+        ################################
+        #    SAIL CONTROL              #
+        ################################
+        #FIXME very minor, but would be easier to use absoluteOffWind = abs(current arg...) and save the trouble of 
+        #Putting the abs() in the mainPos line and the 'correct sign' block 
         # make sails maximize force. See points of sail for reference.
         absoluteOffWind = coerceAngleToRange(self.trueWindDirection - self.boatHeading, -180, 180)
         mainPos = RelativeDirection(lerp(abs(absoluteOffWind), self.minPointingAngle, self.runningAngle, 0.0, 90.0))
@@ -197,9 +206,13 @@ class SailsRudder():
         # Use the sails to help us steer to our desired course
         # Turn to the wind by pulling the mainsail in and freeing the jib
         # Turn away by pulling the jib in and freeing the mailsail
+       
+        # FIXME We should triple check, but I'm pretty sure that the apparent wind info we have is RELATIVE
+        # to the front of the boat (actually, the front of the airmar, which is going to be aligned with the boat)
+        # so, I don't think this code is doing what you want.
         offWindAngle = coerceAngleToRange(self.apparentWindDirection - self.boatHeading, -180, 180)
         maxTurnAngle = offWindAngle
-        if maxTurnAngle > 0:
+        if maxTurnAngle > 0:        #FIXME possible type issue (int to float) and also probably ALWAYS true when using floating point arithmetic... 
             maxTurnAngle -= maxTurnOffset
         else:
             maxTurnAngle += maxTurnOffset
@@ -217,7 +230,7 @@ class SailsRudder():
         turnValue = abs(sailPTerm + self.sailITerm)
         
         # Putting the non zero checks on courseError here help stability
-        # We really do not want to oscillate between towards and wawy from the wind.
+        # We really do not want to oscillate between towards and away from the wind.
         if ((courseError > 5.0 and offWindAngle > 0.0) or
             (courseError < -5.0 and offWindAngle < 0.0)):
             # Sail more towards the wind
@@ -230,6 +243,9 @@ class SailsRudder():
         
         # If the mainsail is very closed, then
         # keep jib from being too closed, open at least a minimum number of degrees
+        # FIXME if we easy the mainsail to turn away from the wind, would this check not be in effect i.e.
+        # if the main's in the jib can't be but if the main is eased the jib can be bone tight (which will
+        # exacerbate stalling. Maybe better to just have a minimum jib angle of 15 degrees or something.
         if abs(mainPos) < self.minClosedAngle and abs(jibPos) < self.minClosedAngle:
             jibPos = -self.minClosedAngle if jibPos < 0 else self.minClosedAngle
             
