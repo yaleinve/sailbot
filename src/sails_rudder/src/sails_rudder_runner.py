@@ -67,7 +67,7 @@ class SailsRudder():
 
         self.maxTurnOffset = 25.0 # The angle away from extremes that maximizes turning with the sails
         self.rudderRange = 60.0 # The maximum angle the rudder can be turned in either direction off straight
-        self.highTurnAngle = 30.0 # The angle against the velocity which will maximize turning, rough model of stall angle
+        self.highTurnAngle = 30.0 # FIXME: what is this relative to?  max left or straight back?  The angle against the velocity which will maximize turning, rough model of stall angle
         self.minClosedAngle = 25.0 # If both main and jib are closed more than this, jib is held at this angle
 
         # PID control of rudder for course correction
@@ -124,15 +124,24 @@ class SailsRudder():
         # The angles of the rudder most effective at effecting rotation
         # are those that are at highTurnAngle to the velocity of the boat
         # n.b. velocityDirection is cog
+        # n.b. Eric interprets as leeway + 180 - 60 + 30 (where 30 meausured from rudder extreme position?
         optimalTurnLeft = coerceAngleToRange((self.velocityDirection - self.highTurnAngle) - (self.boatHeading - 180) + self.rudderRange, 0, 360)
         optimalTurnRight = coerceAngleToRange((self.velocityDirection + self.highTurnAngle) - (self.boatHeading + 180) + self.rudderRange, -360, 0)
-        turningCenter = (optimalTurnLeft + optimalTurnRight) / 2.0
+        turningCenter = (optimalTurnLeft + optimalTurnRight) / 2.0  #FIXME confirm that this is always nearly zero for small leeway
         
+        #FIXME why all positive?
         turnLeftDirection = max(coerceAngleToRange(optimalTurnLeft, 0, 2 * self.rudderRange), turningCenter)
         turnLeftDirection = coerceAngleToRange(turnLeftDirection, 0, 2 * self.rudderRange)
         turnRightDirection = min(coerceAngleToRange(optimalTurnRight, 0, 2 * self.rudderRange), turningCenter)
         turnRightDirection = coerceAngleToRange(turnRightDirection, 0, 2 * self.rudderRange)
         
+        '''FIXME is the following code equivalent?  Rudder angle defined from center, left turn is positive
+        maxEffectFromCenterline = self.rudderRange - self.highTurnAngle
+        leewayAngle = compassDiff(self.velocityDirection, self.boatHeading)
+        turnLeftDirection = max(min(leewayAngle + maxEffectFromCenterline, self.rudderRange),-1.0*self.rudderRange)
+        turnRightDirection = min(max(leewayAngle - maxEffectFromCenterline, -self.rudderRange), self.rudderRange)
+        '''
+
         # Calculate maximum and minimum PID output values currently realizable with our rudder
         # This varies over time as the boat's orientation and velocity and the wind vary
         # Note that positive PID values are negative to indicate to turn left, and positive for right   #FIXME I don't understand this comment... remove first instance of 'positive' ?.
