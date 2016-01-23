@@ -73,6 +73,7 @@ class SailsRudder():
         # The angle at or above which we put both sails all the way out
         self.runningAngle = 165.0 #THIS IS  " " " " RUNNING ANGLE " " " " " "
 
+        self.maxSailEase = 90.0 # Angle from straight back to max ease of main (and for now, jib)
         self.maxTurnOffset = 25.0 # The angle away from extremes that maximizes turning with the sails
         self.rudderRange = 60.0 # The maximum angle the rudder can be turned in either direction off straight
         self.highTurnAngle = 30.0 # The angle against the negative velocity which will maximize turning, rough model of stall angle
@@ -159,7 +160,7 @@ class SailsRudder():
         # This varies over time as the boat's orientation and velocity and the wind vary
         # Note that PID values are negative to indicate left turning, and positive for right
         # But the rudder direction angles are high(positive) for left and low(negative) for right
-        pidLeftLimit = lerp(turnLeftDirection, -self.rudderRange, self.rudderRange, 100, -100)  #FIXME does this work in case 2 + 3?  it works in case 1...
+        pidLeftLimit = lerp(turnLeftDirection, -self.rudderRange, self.rudderRange, 100, -100)
         pidRightLimit = lerp(turnRightDirection, -self.rudderRange, self.rudderRange, 100, -100)
         
         # Adjust rudder to get to desired heading
@@ -167,7 +168,7 @@ class SailsRudder():
         # torque needed to turn the boat
         
         # the PID loop needs time statistics for the I and D terms.
-        timeNow = time.clock()   #FIXME: use rospy.getTime?
+        timeNow = time.clock()
         controlInterval = timeNow - self.lastUpdateTime
         self.lastUpdateTime = timeNow
         
@@ -182,29 +183,23 @@ class SailsRudder():
         # term being maxed out. That gives preference to the sails fixing this kind of thing.
         # However, to prevent impulses, we allow changes that would decrease magnitude
         # and also cause slow decay when the sails could contribute more
+        # Integral term for rudder can only go up when sails are maxed out, but can go down any time
         if abs(self.sailITerm) >= 95.0 or   # sail I term maxed out
-          (self.rudderITerm > 0.0 and courseError < 0.0 or self.rudderITerm < 0.0 and courseError > 0.0):  #FIXME PID v error value question?  What does this case mean?
+          (self.rudderITerm > 0.0 and courseError < 0.0 or self.rudderITerm < 0.0 and courseError > 0.0): #If rudderITerm would decrease in simple PID alg
             self.rudderITerm += courseError * self.rudderI  * controlInterval
         else:
             # Allow the integral to smoothly decay
             self.rudderITerm *= pow(self.rudderIDecay, controlInterval)
-        # Prevent the integral term from exceeding the limits of the PID output
-        if self.rudderI != 0.0:    #FIXME always true for floats unless reset rudderI ?
-            if pidRightLimit > pidLeftLimit:                                               #FIXME is this always true by definition?  only exception is == when leeway ~= 90
-                if self.rudderITerm >= pidRightLimit or self.rudderITerm <= pidLeftLimit: 
-                    self.rudderITerm = max(min(self.rudderITerm, pidRightLimit), pidLeftLimit)
-            else:
-                if self.rudderITerm >= pidLeftLimit or self.rudderITerm <= pidRightLimit:
-                    self.rudderITerm = max(min(self.rudderITerm, pidLeftLimit), pidRightLimit)
-        
+            if self.rudderITerm >= pidRightLimit or self.rudderITerm <= pidLeftLimit: 
+                self.rudderITerm = max(min(self.rudderITerm, pidRightLimit), pidLeftLimit)
+           
         inputDerivative = coerceAngleToRange(pidInput - self.previousInput, -180, 180)
-        pidOutputValue = courseError * self.rudderP + self.rudderITerm - inputDerivative * self.rudderD / controlInterval  #FIXME no scaling for I term?
+        pidOutputValue = courseError * self.rudderP + self.rudderITerm - inputDerivative * self.rudderD / controlInterval
         self.previousInput = pidInput
         
         # conversion of that output value (from -100 to 100) to a physical rudder orientation
         constrainedPidValue = max(min(pidOutputValue, pidRightLimit), pidLeftLimit)
         rudderPos = lerp(constrainedPidValue, -100, 100, turnLeftDirection, turnRightDirection)
-        rudderPos = coerceAngleToRange(rudderPos - rudderRange, -180, 180)  #FIXME do we still need this line?  I think we have our answer one line before...
        
         ################################
         #    SAIL CONTROL              #
@@ -213,10 +208,10 @@ class SailsRudder():
         # the apparent wind direction is already relative to the boat heading. (relative to the physical sensor, that is)
         # make sails maximize force. See points of sail for reference.
         offWindAngle = coerceAngleToRange(self.apparentWindDirection, -180, 180)
-        mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go
+        mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go, note right now it's always positive
         jibPos = mainPos
         
-        # correct sign
+        # correct sign- coordinate frame is same as rudder (+ is sails on port side)
         if offWindAngle < 0.0:
             mainPos = -mainPos
             jibPos = -jibPos
@@ -227,41 +222,30 @@ class SailsRudder():
         
         # Make the sign of course error associate negative with away from wind, and positive into wind
         # This lets the control loop evenly progress back and forth
-        sailCourseError := courseError  #FIXME i don't know python, what is := ? or is it from go?
+        sailCourseError = courseError  #FIXME i don't know python, what is := ? or is it from go?
         
-        intoWind = (offWindAngle > 0.0 and courseError > 0.0) or (offWindAngle < 0.0 and courseError < 0.0)  #Do we need to turn into wind?
-        if intoWind and sailCourseError < 0.0 or not intoWind and sailCourseError > 0.0:
-            sailCourseError = -sailCourseError
-        '''FIXME would this be simpler/ same effect?
-           if offWindAngle < 0.0:   #We're on starboard
-              sailCourseError = -sailCourseError
-        '''
-                      
-
+        if offWindAngle < 0.0:   #We're on starboard
+            sailCourseError = -sailCourseError                
     
         # PI control
-        # FIXME: confirm PI value > 0 --> try to turn into wind. 
         sailPTerm = sailCourseError * self.sailP
         self.sailITerm += sailCourseError * self.sailI * controlInterval
 
         # Prevent value from exceeding the maximum effect value at 100
         self.sailITerm = max(min(self.sailITerm, 100), -100)
         turnValue = sailPTerm + self.sailITerm
-      
-        #FIXME what is this code and can you perform logic on a variable before it's assigned? 
-        maxOpenAngle = offWindAngle + (-maxTurnOffset if maxOpenAngle > 0 else maxTurnOffset)
-        maxOpenAngle = max(min(maxOpenAngle, 90 - maxTurnOffset), -90 + maxTurnOffset)
-        
-        # Putting the non zero checks on courseError here help stability
-        # We really do not want to oscillate between towards and away from the wind.
-        if turnValue > 0.0:
-            # Sail more towards the wind
-            mainPos = lerp(turnValue, 0, 100, mainPos, maxTurnOffset if mainPos > 0.0 else -maxTurnOffset)
-            jibPos = lerp(turnValue, 0, 100, jibPos, maxOpenAngle)
+     
+        #FIXME PORT THIS PLEASE!!! 
+        maxOpenPos = min(mainPos + maxTurnOffset, self.maxSailEase) # Note that we may split maxSailEase into sail specific parameters        
+        maxClosePos = max(mainPos - maxTurnOffset, self.maxSailEase)
+
+        if turnValue > 0.0: # Turning into the wind
+            mainPos = lerp(turnValue, 0, 100, mainPos, maxClosePos)
+            jibPos = lerp(turnValue, 0, 100, jibPos, maxOpenPos)
         else:
             # Sail more away from the wind
-            mainPos = lerp(-turnValue, 0, 100, mainPos, maxOpenAngle)
-            jibPos = lerp(-turnValue, 0, 100, jibPos, maxTurnOffset if mainPos > 0.0 else -maxTurnOffset)
+            mainPos = lerp(-turnValue, 0, 100, mainPos, maxOpenPos)
+            jibPos = lerp(-turnValue, 0, 100, jibPos, maxClosePos)
         
         # To maximize flow around the sails, we keep the jib open at least some
         if abs(jibPos) < self.minClosedAngle:
