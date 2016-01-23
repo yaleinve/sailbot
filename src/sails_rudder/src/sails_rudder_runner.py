@@ -73,6 +73,7 @@ class SailsRudder():
         # The angle at or above which we put both sails all the way out
         self.runningAngle = 165.0 #THIS IS  " " " " RUNNING ANGLE " " " " " "
 
+        self.maxSailEase = 90.0 # Angle from straight back to max ease of main (and for now, jib)
         self.maxTurnOffset = 25.0 # The angle away from extremes that maximizes turning with the sails
         self.rudderRange = 60.0 # The maximum angle the rudder can be turned in either direction off straight
         self.highTurnAngle = 30.0 # The angle against the negative velocity which will maximize turning, rough model of stall angle
@@ -185,12 +186,14 @@ class SailsRudder():
         # term being maxed out. That gives preference to the sails fixing this kind of thing.
         # However, to prevent impulses, we allow changes that would decrease magnitude
         # and also cause slow decay when the sails could contribute more
+        # Integral term for rudder can only go up when sails are maxed out, but can go down any time
         if abs(self.sailITerm) >= 95.0 or   # sail I term maxed out
-           (self.rudderITerm > 0.0 and courseError < 0.0 or self.rudderITerm < 0.0 and courseError > 0.0):
+           (self.rudderITerm > 0.0 and courseError < 0.0 or self.rudderITerm < 0.0 and courseError > 0.0): #If rudderITerm would decrease in simple PID alg
             self.rudderITerm += courseError * self.rudderI * controlInterval
         else:
             # Allow the integral to smoothly decay
             self.rudderITerm *= pow(self.rudderIDecay, controlInterval)
+        
         # Prevent the integral term from exceeding the limits of the PID output
         if self.rudderITerm >= pidRightLimit or self.rudderITerm <= pidLeftLimit:
             self.rudderITerm = max(min(self.rudderITerm, pidRightLimit), pidLeftLimit)
@@ -209,10 +212,10 @@ class SailsRudder():
         # the apparent wind direction is already relative to the boat heading. (relative to the physical sensor, that is)
         # make sails maximize force. See points of sail for reference.
         offWindAngle = coerceAngleToRange(self.apparentWindDirection, -180, 180)
-        mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go
+        mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go, note right now it's always positive
         jibPos = mainPos
         
-        # correct sign
+        # correct sign- coordinate frame is same as rudder (+ is sails on port side)
         if offWindAngle < 0.0:
             mainPos = -mainPos
             jibPos = -jibPos
@@ -225,7 +228,6 @@ class SailsRudder():
         # This lets the control loop evenly progress back and forth
         sailCourseError = courseError
         
-        intoWind = (offWindAngle > 0.0 and courseError > 0.0) or (offWindAngle < 0.0 and courseError < 0.0)  #Do we need to turn into wind?
         if offWindAngle < 0.0:   #We're on starboard
             sailCourseError = -sailCourseError
     
