@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 #conclusion that 6 is rudder, 5 is main sail, and 3 is jib for mraa pin numbers
-
+#important!! with fst6 controller, switches cause jump from about 37 to 67 (raw values from analog read).  We can just put a separator in between
+#to figure out which mode we're in
 import mraa
 import time
 
@@ -33,7 +34,8 @@ def main():
 
 
   #Analog config
-  ANALOG_PIN = 1
+  ANALOG_PIN = 1        #Reading from aux 1
+  #ANALOG_PIN=0          #Reading from aux 2
   aio = mraa.Aio(ANALOG_PIN)
 
 
@@ -51,7 +53,7 @@ def main():
 
     print('value from analaog ' + str(ANALOG_PIN) + ": " + str(aval))
     print('equivalent to ' + str(aio.read()/1024.0 * 5.0) + ' volts')
-
+    print('Aux disambiguate: ' + str(aio.read() > 50))
 
 if __name__ == "__main__":
     main()
