@@ -34,8 +34,9 @@ def main():
 
 
   #Analog config
-  ANALOG_PIN = 1        #Reading from aux 1
+  #ANALOG_PIN = 1        #Reading from aux 1
   #ANALOG_PIN=0          #Reading from aux 2
+  ANALOG_PIN=4           #Reading from Rudder
   aio = mraa.Aio(ANALOG_PIN)
 
 
