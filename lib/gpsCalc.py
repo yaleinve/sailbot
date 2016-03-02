@@ -23,7 +23,7 @@ def gpsBearing(lat1, lon1, lat2, lon2):
   d = degrees(atan2(y, x))
   return (d%360)
 
-
+#found online #TODO find source of this code.
 def destEllipse(lat1, lon1, brg, s, a, b):
   cs1 = ds1 = ss1 = cs1m = 0
   s *= 1000
