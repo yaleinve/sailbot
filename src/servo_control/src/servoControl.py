@@ -17,15 +17,16 @@ import sys
 from servo_control.msg import ServoPos
 
 #CONFIG CONSTANTS
-debug = True         #This hijacks the relays so the board is always in 'autonomous' mode
+debug = True         #This hijacks the relays so the board is always in the mode we want
+debug_auto =  False   #If we hijack, to we hijack into autonomous or RC mode?
 
 #Ratchet Specifications: This is needed to map sail angles to sheet lengths
 drum_diameter = 1.25  #The internal diameter of the winch drums, in inches             #TODO: measure this
-boom_height = 2.00  #The vertical distance from the exit point of the main sheet to the boom #TODO: measure this
+boom_height = 4.00  #The vertical distance from the exit point of the main sheet to the boom #TODO: measure this
 boom_length = 12.00  #The length from the gooseneck to the mainsheet attachment point along the boom, in inches.  #TODO: measure this
-club_height = 1.00 #The vertical distance from the exit of the jibsheet to the club, in inches  #TODO: measure this
+club_height = 2.00 #The vertical distance from the exit of the jibsheet to the club, in inches  #TODO: measure this
 club_length = 12.00 #The length from the club pivot to the jibsheet attachment point, in inches.  #TODO: measure this
-main_0_is_duty_max = False  #Which way to orient the servo, see file comment.  #TODO: Set these values appropriately
+main_0_is_duty_max = True  #Which way to orient the servo, see file comment.  #TODO: Set these values appropriately
 jib_0_is_duty_max = False
 
 
@@ -52,17 +53,24 @@ main_pwm = None
 jib_pwm = None
 rudder_pwm = None
 
+#A simple class to fool the rotate() method so we can init everything to zero
+class RotateMock():
+    def __init__(self):
+        self.main_angle = 0.0
+        self.jib_angle=0.0
+        self.rudder_angle=0.0
 
-def hijack():
+
+def hijack(auto):
   if debug:
     AUTONOMOUS_SELECT_PIN = 2   #2 is for rudder, 4 is main/jib
     auto_select_pin = mraa.Gpio(AUTONOMOUS_SELECT_PIN)
     auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
-    auto_select_pin.write(1)
+    auto_select_pin.write(1 if debug_auto else 0)
     AUTONOMOUS_SELECT_PIN = 4   #2 is for rudder, 4 is main/jib
     auto_select_pin = mraa.Gpio(AUTONOMOUS_SELECT_PIN)
     auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
-    auto_select_pin.write(1)
+    auto_select_pin.write(1 if debug_auto else 0)
 
 
 
@@ -78,10 +86,11 @@ def initPWMs():
   main_pwm.period_us(int(winch_period))
   jib_pwm.period_us(int(winch_period))
   rudder_pwm.period_us(int(rudder_period))
-  #Enable, but servos won't move until sent a message I think (b/c nothing is written?)
   main_pwm.enable(True)
   jib_pwm.enable(True)
   rudder_pwm.enable(True)
+  rotate(RotateMock())
+
 
 def rotate(angle):
   #Import Globals
@@ -93,6 +102,9 @@ def rotate(angle):
   main_raw = angle.main_angle   #TODO: this message format is not yet specified
   jib_raw = angle.jib_angle
   rudder_raw = angle.rudder_angle
+  #print main_raw
+  #print jib_raw
+  #print rudder_raw
 
   #Bound the input to our acceptable sail angle range
   if main_raw < 0.00:
@@ -154,5 +166,5 @@ if __name__ == "__main__":
   rospy.loginfo("debug mode set to: " + str(debug))
   #Hijack sevo control?
   if debug:
-    hijack()
+    hijack(debug_auto)
   listener()
