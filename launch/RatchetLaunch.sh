@@ -1,10 +1,8 @@
 #!/bin/bash
 
-#TODO: make sure roscore boots first, change perms so must be sudoed (?), make it pretty
-
-
 tmux new-session -d -s RatchetStack
 tmux send-keys 'roscore &'
+tmux send-keys 'sleep 5'
 tmux send-keys 'rosrun captain captain_runner.py' 'C-m'
 tmux split-window -h
 tmux send-keys 'rosrun tactics tactics_runner.py' 'C-m'
