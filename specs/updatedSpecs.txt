@@ -2,7 +2,6 @@ InVe 2015-16      Andrew Malta (Mar 2016)
 
 InVe Sailboat Software Specifications
 
-
 Node specifications
   a) captain
   b) airmar
@@ -11,8 +10,7 @@ Node specifications
   e) tactics
 
 
-Custom Message Types:
-  
+Custom Message Types:  
   1. AirmarData:
       float64               heading
       float64               amrRoll
@@ -70,8 +68,7 @@ Custom Message Types:
       float64    main_angle
       float64    jib_angle
       float64    rudder_angle
-
-  
+       
 Node Specifications
 
 a) captain
@@ -95,13 +92,30 @@ b) airmar
    Subscriptions: /leg_info
    Publications:  /airmar_data
 
+   Subscribes to LegInfo and uses this information to calculate cross track error. This node simply
+   reads information from the airmar weather station sensor and populates/publishes the airmar_data
+   topic used by various other nodes.
+
 c) servo_control
-   Subscriptions: /servo_pos
+   Subscriptions: /sails_rudder_pos
+
+   Subscribes to /sails_rudder_pos topic and changes the three servos to obtain the 3 angles on the rudder, main sail, and jib as specified in the topic.
 
 d) sails_rudder
    Subscriptions: /leg_info, /nav_targets
    Publications:  /sails_rudder_pos
 
+   Given the nav_targets information published by tactics telling the boat where we want to go, this node determines the angles we need to change the rudder, main, and jib to achieve motion
+   along this target_course. It publishes the /sails_rudder_pos topic which just consists of the three angles the node calculates.
+   
 e) tactics
    Subscriptions: /leg_info, /airmar_data
    Publications:  /nav_targets
+
+   Using the information in /airmar data and /leg_info, such as wind direction, our current XTE,
+   our pointing angle, etc..  this node determines which way we should tack. This information is published in the /nav_targets topic.
+
+
+
+
+

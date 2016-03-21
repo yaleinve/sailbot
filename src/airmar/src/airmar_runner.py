@@ -3,6 +3,9 @@
 #Updated by Eric Anderson 12/15 to adapt for Edison and recent arch changes,
 #namely that we rely solely on airmar (and camera) for sensing - no navsat
 
+#Updated by Andrew Malta 3/21 to fix our adaptation of airmar to do what naviagator
+#and speedcalc was doing.
+
 import rospy
 import random
 import serial

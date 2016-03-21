@@ -14,7 +14,7 @@ import roslib
 import rospy
 import math
 import sys
-from servo_control.msg import ServoPos
+from sails_rudder.msg import SailsRudderPos
 import numpy as np
 
 #CONFIG CONSTANTS
@@ -114,9 +114,10 @@ def rotate(angle):
   global rudder_pwm
   #The input to this controller is three angles. For sails, 0 corresponds to all the way in
   #For Rudder, 0 Corresponds to centerline
-  main_raw = angle.main_angle
-  jib_raw = angle.jib_angle
-  rudder_raw = angle.rudder_angle
+
+  main_raw = angle.mainPos
+  jib_raw = angle.jibPos
+  rudder_raw = angle.rudderPos
   #print main_raw
   #print jib_raw
   #print rudder_raw
@@ -190,7 +191,7 @@ def rotate(angle):
 
 def listener():
   rospy.init_node("servo_control")
-  rospy.Subscriber("/servo_pos", ServoPos, rotate)
+  rospy.Subscriber("/sails_rudder_pos", SailsRudderPos, rotate)
   rospy.spin()
 
 if __name__ == "__main__":
