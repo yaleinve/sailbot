@@ -37,7 +37,7 @@ def main():
   auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
   auto_select_pin.write(1)
 
-  PWM_PIN = 5;    #pwm pins are the same as listed on the breakout board. (3 jib, 5 main, 6 rudder)
+  PWM_PIN = 3;    #pwm pins are the same as listed on the breakout board. (3 jib, 5 main, 6 rudder)
   pwm = mraa.Pwm(PWM_PIN);
   pwm.period_us(int(period));   #Period in microseconds, corresponds to 50Hz like the winch motors.
   pwm.enable(True);
