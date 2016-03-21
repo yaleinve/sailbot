@@ -14,6 +14,7 @@ import roslib
 import rospy
 import sys
 import time
+import math
 
 from compassCalc import *
 
@@ -187,7 +188,8 @@ class SailsRudder():
         # However, to prevent impulses, we allow changes that would decrease magnitude
         # and also cause slow decay when the sails could contribute more
         # Integral term for rudder can only go up when sails are maxed out, but can go down any time
-        if abs(self.sailITerm) >= 95.0 or   # sail I term maxed out
+        # sail I term maxed out
+        if abs(self.sailITerm) >= 95.0 or \
            (self.rudderITerm > 0.0 and courseError < 0.0 or self.rudderITerm < 0.0 and courseError > 0.0): #If rudderITerm would decrease in simple PID alg
             self.rudderITerm += courseError * self.rudderI * controlInterval
         else:
@@ -241,11 +243,11 @@ class SailsRudder():
       
         # The positions that given maximum turning torque from sails
         if mainPos > 0:
-            maxOpenPose = min(mainPos + maxTurnOffset, self.maxSailEase)
-            maxClosePose = max(mainPos - maxTurnOffset, 0)
+            maxOpenPose = min(mainPos + self.maxTurnOffset, self.maxSailEase)
+            maxClosePose = max(mainPos - self.maxTurnOffset, 0)
         else:
-            maxOpenPose = max(mainPos - maxTurnOffset, -self.maxSailEase)
-            maxClosePose = min(mainPos + maxTurnOffset, 0)
+            maxOpenPose = max(mainPos - self.maxTurnOffset, -self.maxSailEase)
+            maxClosePose = min(mainPos + self.maxTurnOffset, 0)
         
         if turnValue > 0.0:
             # Sail more towards the wind
@@ -276,8 +278,8 @@ class SailsRudder():
 
     def listener(self):
         rospy.init_node("sailsRudder")
-        rospy.Subscriber("/airmar_data", AirmarData, self.airmar_callback())
-        rospy.Subscriber("/target_heading", TargetHeading, self.tactics_callback())
+        rospy.Subscriber("/airmar_data", AirmarData, self.airmar_callback)
+        rospy.Subscriber("/target_heading", NavTargets, self.tactics_callback)
         rospy.spin()
 
 if __name__ == "__main__":

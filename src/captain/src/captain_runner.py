@@ -250,6 +250,7 @@ class Captain():
         #40m square box, square to the wind.  Stay in the box for five minutes, then exit the box
         #Input: lat/long of box corners in following order: nw, sw, se, ne (relative to wind)
         #Alg sketch: sail a narrow corridor to the middle of the box laterally, 2/3 upwind
+
         elif self.compMode == "StationKeeping":       #Stay within box created by 4 gps points
             #Bearing west to east in box
             wToEBrng = (gpsBearing(self.gpsLat1, self.gpsLong1,self.gpsLat4,self.gpsLong4) +  gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat3,self.gpsLong3))/2.0
@@ -282,18 +283,19 @@ class Captain():
 
 
     #Reads the aux inputs, switches relays and republishes leg info accordingly
-    #Note that thi may call publish_captain() before a waypoint has been pulled off the queue,
+    #Note that this may call publish_captain() before a waypoint has been pulled off the queue,
     #So publish_captain has to handle that case
     def checkAutonomous(self):
         #TODO: might want to switch these- consider case when controller is turned off.  We want to default to autonomous, right?
+        #rospy.loginfo('[captain debug]: aux 1 read is : ' + str(self.autonomousPin.read()))
         #Manual Mode
         if (self.autonomousPin.read() < self.auxDivide):
             #If we just switched modes
             if self.currentlyAutonomous == True:
                 rospy.loginfo('[captain] switching into manual mode')
                 self.currentlyAutonomous = False
-                #self.rudderRelayPin.write(0)
-                #self.sailRelayPin.write(0)
+                self.rudderRelayPin.write(0)
+                self.sailRelayPin.write(0)
                 self.publish_autonomous()
         #Autonomous mode
         else:
@@ -301,8 +303,8 @@ class Captain():
             if self.currentlyAutonomous == False:
                 rospy.loginfo('[captain] Switching into autonomous mode')
                 self.currentlyAutonomous = True
-                #self.rudderRelayPin.write(1)
-                #self.sailRelayPin.write(1)
+                self.rudderRelayPin.write(1)
+                self.sailRelayPin.write(1)
                 self.publish_autonomous()
 
                 #For station keeping, we'll start the five minute timer when we go into autonomous mode
@@ -348,7 +350,7 @@ class Captain():
 
         # If we are close to our target, we are in "cautious" mode,
         # which calls for a higher frequency of checking if we've completed it.
-        normal_checkleg_rate = rospy.Rate(0.25) # Hz  Check every four seconds if far away
+        normal_checkleg_rate = rospy.Rate(0.5) # Hz  Check every two seconds if far away.  Could clock even slower, but it is the limiting factor on autonomous/manual switching as well
         cautious_checkleg_rate = rospy.Rate(2) # Hz  Check every half second if cautious
 
         #Infinite Loop
