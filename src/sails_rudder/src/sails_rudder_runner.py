@@ -277,7 +277,7 @@ class SailsRudder():
     def listener(self):
         rospy.init_node("sailsRudder")
         rospy.Subscriber("/airmar_data", AirmarData, self.airmar_callback())
-        rospy.Subscriber("/target_heading", TargetHeading, self.tactics_callback())
+        rospy.Subscriber("/nav_targets", NavTargets, self.tactics_callback())
         rospy.spin()
 
 if __name__ == "__main__":

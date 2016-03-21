@@ -13,7 +13,6 @@ import mraa
 
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 from airmar.msg import AirmarData
-from navigator.msg import TargetCourse
 from captain.msg import LegInfo
 
 #Debugging airmar as steering wheel
@@ -107,35 +106,36 @@ class Airmar:
     airmar_data_msg.truWndDir = self.truWndDir
     airmar_data_msg.lat = self.lat
     airmar_data_msg.long = self.long      #FIXME: does 'long' overwrite a python keyword?
+    
+    self.target_range = gpsDistance(self.lat, self.long, spd.end_lat, spd.end_long)
+    self.target_course = gpsBearing(self.lat, self.long, spd.end_lat, spd.end_long)
 
     #Calculated in speed calculator
     airmar_data_msg.VMG = self.spd.calc_VMG(float(self.sog), float(self.cog))
     airmar_data_msg.VMGup  = self.spd.calc_VMGup(float(self.sog),float(self.cog),float(self.truWndDir))
-    airmar_data_msg.XTE = self.spd.calc_xte()
+    airmar_data_msg.XTE = self.spd.calc_xte(self.target_course, target_range)
 
     self.pub.publish(airmar_data_msg)
 
 
 class SpeedCalculator:
   def __init__(self):
-    #For target course callback (navigator output)
-    self.target_course = 0.0
-    self.target_range = 0.0
-
     #For leg info callback (captain output)
     self.leg_course = 0.0
     self.leg_start_lat = 0.0
     self.leg_start_long = 0.0
-
-  #Callbacks
-  def target_course_callback(self, data):
-    self.target_course = data.course
-    self.target_range = data.range
+    
+    self.end_lat = 0.0
+    self.end_long = 0.0
+    
 
   def leg_info_callback(self, data):
     self.leg_course = data.leg_course
     self.leg_start_lat = data.begin_lat
     self.leg_start_long = data.begin_long
+    self.end_lat = data.end_lat
+    self.end_long = data.end_long
+
 
   #CALCULATION FUNCTIONS
   #returns the scalar projection of the vector (magnitude direction) onto course.
@@ -168,8 +168,8 @@ class SpeedCalculator:
   def calc_VMGup(self, sog, cog, truWndDir):
     return -1.0*self.vector_projection(sog, cog, truWndDir) #Wind vector is in opposite direction of positive VMGup!!
 
-  def calc_xte(self):
-    return self._calculate_xte(self.target_range, self.target_course, self.leg_course)
+  def calc_xte(self, target_course, target_range):
+    return self._calculate_xte(target_range, target_course, self.leg_course)
 
 
 if __name__ == '__main__':
@@ -177,6 +177,7 @@ if __name__ == '__main__':
         #Init the ros node
         rospy.init_node('airmar')
         spd = SpeedCalculator()
+        rospy.Subscriber("/leg_info", LegInfo, spd.leg_info_callback)
         am = Airmar(spd)
         rospy.loginfo("[airmar] Started airmar node!")
 

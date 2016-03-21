@@ -16,7 +16,6 @@ from gpsCalc import *    #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from captain.msg import CompetitionInfo      #User input
 from captain.msg import AutonomousStatus
-from std_msgs.msg import Bool                #The bool for manual mode
 from airmar.msg import AirmarData
 
 #Waypoint class allows us to easily handle legs in a journey
@@ -202,7 +201,7 @@ class Captain():
         elif self.compMode == "MaintainPointOfSail":        #Sail a constant angle to the wind forever
             course = (self.truWndDir + self.angle) %360.0   #The course relative to the wind
             loc = gpsVectorOffset(self.currentLat,self.currentLong,course,50000)
-            self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 100km in direction of angle
+            self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 50km in direction of angle
 
         #==================================#
         #   COMPETITION MODES              #
@@ -360,8 +359,6 @@ class Captain():
                 cautious_checkleg_rate.sleep()
             else:
                 normal_checkleg_rate.sleep()
-
-
 
 
 if __name__ == "__main__":
