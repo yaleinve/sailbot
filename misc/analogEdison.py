@@ -37,21 +37,21 @@ def main():
   auto_select_pin.dir(mraa.DIR_OUT)   #Really important that you set the input/output of the pin...
   auto_select_pin.write(1)
 
-  PWM_PIN = 6;    #pwm pins are the same as listed on the breakout board. (3 jib, 5 main, 6 rudder)
-  pwm = mraa.Pwm(PWM_PIN);
-  pwm.period_us(int(period));   #Period in microseconds, corresponds to 50Hz like the winch motors.
-  pwm.enable(True);
+  #PWM_PIN = 6;    #pwm pins are the same as listed on the breakout board. (3 jib, 5 main, 6 rudder)
+  #pwm = mraa.Pwm(PWM_PIN);
+  #pwm.period_us(int(period));   #Period in microseconds, corresponds to 50Hz like the winch motors.
+  #pwm.enable(True);
 
 
   #Analog config
   #ANALOG_PIN = 1        #Reading from aux 1
   #ANALOG_PIN=0          #Reading from aux 2
-  ANALOG_PIN=4           #Reading from Rudder
+  ANALOG_PIN=5           #Reading from Rudder
   aio = mraa.Aio(ANALOG_PIN)
 
 
   while True:
-    val = input("Enter a duty cycle in [0,1]:  ");
+    val = input("Enter a duty cycle in [0,1]:  ")
     print(val);
     if val < 0 or val > 1:
       print("Duty is out of range");
@@ -59,11 +59,11 @@ def main():
     duty = val;
     writeval = (duty_min + (duty_max-duty_min)*duty)
     print writeval
-    aval = aio.read()
-    pwm.write(writeval);       #Scale it according to our ranges
+    val = aio.read()
+    #pwm.write(writeval);       #Scale it according to our ranges
 
-    #print('value from analaog ' + str(ANALOG_PIN) + ": " + str(aval))
-    #print('equivalent to ' + str(aio.read()/1024.0 * 5.0) + ' volts')
+    print('value from analaog ' + str(ANALOG_PIN) + ": " + str(aval))
+    print('equivalent to ' + str(aio.read()/1024.0 * 5.0*2.0) + ' volts')
     #print('Aux disambiguate: ' + str(aio.read() > 50))
 
 if __name__ == "__main__":
