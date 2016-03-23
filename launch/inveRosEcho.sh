@@ -15,7 +15,7 @@ tmux select-pane -t 0
 tmux send-keys 'rostopic echo /airmar_data' 'C-m'
 
 tmux select-pane -t 1
-tmux send-keys 'rostopic echo /competion_info' 'C-m'
+tmux send-keys 'rostopic echo /competition_info' 'C-m'
 
 tmux select-pane -t 2
 tmux send-keys 'rostopic echo /leg_info' 'C-m'

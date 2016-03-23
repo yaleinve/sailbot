@@ -13,6 +13,7 @@ import pynmea2
 import pdb
 import time
 import mraa
+from gpsCalc import *
 
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 from airmar.msg import AirmarData
@@ -24,7 +25,7 @@ from captain.msg import LegInfo
 class Airmar:
   def __init__(self, speedCalculatorInstance):
     #Set the publishing rate of the airmar to 2Hz for now
-    self.pubInterval = 0.2      # Seconds between publishes
+    self.pubInterval = 0.1      # Seconds between publishes
 
     self.heading = 0
     self.amrRoll = 0
@@ -103,20 +104,20 @@ class Airmar:
     airmar_data_msg.amrRoll = self.amrRoll
     airmar_data_msg.apWndDir = self.apWndDir
     airmar_data_msg.apWndSpd = self.apWndSpd
-    airmar_data_msg.cog = self.cog
-    airmar_data_msg.sog = self.sog
+    airmar_data_msg.cog = self.heading  #self.cog    #For debugging purposes
+    airmar_data_msg.sog = 2.0  #self.sog    #For debugging purposes
     airmar_data_msg.truWndSpd = self.truWndSpd
     airmar_data_msg.truWndDir = self.truWndDir
     airmar_data_msg.lat = self.lat
     airmar_data_msg.long = self.long      #FIXME: does 'long' overwrite a python keyword?
-    
+
     self.target_range = gpsDistance(self.lat, self.long, spd.end_lat, spd.end_long)
     self.target_course = gpsBearing(self.lat, self.long, spd.end_lat, spd.end_long)
 
     #Calculated in speed calculator
     airmar_data_msg.VMG = self.spd.calc_VMG(float(self.sog), float(self.cog))
     airmar_data_msg.VMGup  = self.spd.calc_VMGup(float(self.sog),float(self.cog),float(self.truWndDir))
-    airmar_data_msg.XTE = self.spd.calc_xte(self.target_course, target_range)
+    airmar_data_msg.XTE = self.spd.calc_xte(self.target_course, self.target_range)
 
     self.pub.publish(airmar_data_msg)
 
@@ -127,10 +128,10 @@ class SpeedCalculator:
     self.leg_course = 0.0
     self.leg_start_lat = 0.0
     self.leg_start_long = 0.0
-    
+
     self.end_lat = 0.0
     self.end_long = 0.0
-    
+
 
   def leg_info_callback(self, data):
     self.leg_course = data.leg_course

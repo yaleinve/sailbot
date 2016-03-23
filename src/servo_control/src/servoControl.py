@@ -18,7 +18,7 @@ from sails_rudder.msg import SailsRudderPos
 import numpy as np
 
 #CONFIG CONSTANTS
-debug = True         #This hijacks the relays so the board is always in the mode we want
+debug = False         #This hijacks the relays so the board is always in the mode we want
 debug_auto =  False   #If we hijack, to we hijack into autonomous or RC mode?
 
 #Ratchet Specifications: This is needed to map sail angles to sheet lengths
@@ -71,10 +71,9 @@ rudder_pwm = None
 #A simple class to fool the rotate() method so we can init everything to zero
 class RotateMock():
     def __init__(self):
-        self.main_angle = 0.0
-        self.jib_angle=0.0
-        self.rudder_angle=0.0
-
+        self.mainPos = 0.0
+        self.jibPos=0.0
+        self.rudderPos=0.0
 
 def hijack(auto):
   if debug:

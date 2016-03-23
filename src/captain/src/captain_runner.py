@@ -364,4 +364,9 @@ class Captain():
 
 
 if __name__ == "__main__":
-    Captain().listener()
+    cap = Captain()
+    try:
+        cap.listener()
+    except KeyboardInterrupt:
+        self.rudderRelayPin.write(0)
+        self.sailRelayPin.write(0)

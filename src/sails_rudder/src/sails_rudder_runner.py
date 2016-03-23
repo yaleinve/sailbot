@@ -6,7 +6,7 @@
 # All values are represented as angles in degrees
 #Implements a bare bones sail controller that cues off the airmar
 #and linearly maps feasible sailing directions to feasible sail positions.
-#Because of how our servo drivers work, we can use an abstract sail trim scale 
+#Because of how our servo drivers work, we can use an abstract sail trim scale
 #here from 0 (max trim) to 100 (max ease)
 
 #Basic Imports
@@ -29,7 +29,7 @@ from sails_rudder.msg import SailsRudderPos #Write to
 def lerp(x, minX, maxX, minVal, maxVal):
     x = min(max(x, minX), maxX)
     return (x - minX) / (maxX - minX) * (maxVal - minVal) + minVal
-    
+
 # coerses the angle into the given range, using modular 360 arithmetic
 # If min angle to max angle is 360 degrees, then only modular arithmetic occurs
 # if min angle and max angle do not span 360 degrees, then the value is coerced
@@ -68,7 +68,7 @@ class SailsRudder():
         self.mainTolerance = 5.0 #The differences at which point we republish
         self.jibTolerance = 5.0
         self.rudderTolerance = 1.0
-        
+
         # The lowest off wind angle we will sail
         self.minPointingAngle = 50.0 #THIS IS THE HARDCODED POINTING ANGLE IN TACTICS!  IT MUST BE ADJUSTED IF THE VALUE IN TACTICS IS CHANGED!!!
         # The angle at or above which we put both sails all the way out
@@ -76,7 +76,7 @@ class SailsRudder():
 
         self.maxSailEase = 90.0 # Angle from straight back to max ease of main (and for now, jib)
         self.maxTurnOffset = 25.0 # The angle away from extremes that maximizes turning with the sails
-        self.rudderRange = 60.0 # The maximum angle the rudder can be turned in either direction off straight
+        self.rudderRange = 50.0 # The maximum angle the rudder can be turned in either direction off straight
         self.highTurnAngle = 30.0 # The angle against the negative velocity which will maximize turning, rough model of stall angle
         self.minClosedAngle = 15.0 # Keep the jib open by at least this angle
 
@@ -91,9 +91,9 @@ class SailsRudder():
         self.sailP = 1.2
         self.sailI = 1.2
         self.sailITerm = 0.0
-        
+
         self.rudderIDecay = 0.95 # decay factor per second of rudder integral when sails could contribute more
-        
+
         # Input values from other nodes
         self.targetHeading = 0.0
         self.boatHeading = 0.0
@@ -111,14 +111,14 @@ class SailsRudder():
     def tactics_callback(self, data):
         self.targetHeading = data.targetHeading
         self.updatePositions()
-        
+
     def airmar_callback(self, data):
         self.apparentWindDirection = data.apWndDir
         self.trueWindDirection = data.truWndDir
         self.velocityDirection = data.cog # course over ground
         self.boatHeading = data.heading
         self.updatePositions()
-        
+
     def updatePositions(self):
 
         ################################
@@ -126,16 +126,16 @@ class SailsRudder():
         ################################
 
         # Calculate the limits of PID output values
-        
+
         # Use the lower-bound of the rudder as a reference point 0.
         # So an angle here of 0 would correspond to the rudder being rudderRange
         # degrees counterclockwise from straight.
-        
+
         # The angles of the rudder most effective at effecting rotation
         # are those that are at highTurnAngle to the velocity of the boat
         # n.b. velocityDirection is cog (course over ground)
         leeway = compass_diff(self.boatHeading, self.velocityDirection)
-        
+
         # The three cases below are that 1. there are good positions for the rudder to turn
         # 2. the boat is moving backwards, so the rudder can go the opposite direction
         # 3. no matter how the rudder is positioned, the boat will be turned and we don't
@@ -152,7 +152,7 @@ class SailsRudder():
             pidLeftLimit = lerp(turnLeftDirection, optimalTurnRight, optimalTurnLeft, 100, -100)
             pidRightLimit = lerp(turnRightDirection, optimalTurnRight, optimalTurnLeft, 100, -100)
         elif abs(leeway) >= 180 - self.rudderRange:
-            oppositeTurnCenter = compassDiff(math.fmod(self.boatHeading + 180, 360), self.velocityDirection)
+            oppositeTurnCenter = compass_diff(math.fmod(self.boatHeading + 180, 360), self.velocityDirection)
             optimalTurnLeft = oppositeTurnCenter - self.highTurnAngle
             optimalTurnRight = oppositeTurnCenter + self.highTurnAngle
             turnLeftDirection = max(optimalTurnLeft, -self.rudderRange)
@@ -166,23 +166,23 @@ class SailsRudder():
             turnRightDirection = 0.0
             pidLeftLimit = 0.0
             pidRightLimit = 0.0
-        
+
         # Adjust rudder to get to desired heading
         # Rudder needs to be off from the boat velocity to generate
         # torque needed to turn the boat
-        
+
         # the PID loop needs time statistics for the I and D terms.
         timeNow = time.time()
         controlInterval = timeNow - self.lastUpdateTime
         self.lastUpdateTime = timeNow
-        
-        # PID control            
+
+        # PID control
         pidSetpoint = self.targetHeading
         # simulate some error in our ability to read our heading
         pidInput = self.boatHeading
-        
+
         courseError = coerceAngleToRange(pidSetpoint - pidInput, -180, 180)
-        
+
         # Make adding to the rudder integral term conditional on the sails integral
         # term being maxed out. That gives preference to the sails fixing this kind of thing.
         # However, to prevent impulses, we allow changes that would decrease magnitude
@@ -195,19 +195,19 @@ class SailsRudder():
         else:
             # Allow the integral to smoothly decay
             self.rudderITerm *= pow(self.rudderIDecay, controlInterval)
-        
+
         # Prevent the integral term from exceeding the limits of the PID output
         if self.rudderITerm >= pidRightLimit or self.rudderITerm <= pidLeftLimit:
             self.rudderITerm = max(min(self.rudderITerm, pidRightLimit), pidLeftLimit)
-        
+
         inputDerivative = coerceAngleToRange(pidInput - self.previousInput, -180, 180)
         pidOutputValue = courseError * self.rudderP + self.rudderITerm - inputDerivative * self.rudderD / controlInterval
         self.previousInput = pidInput
-        
+
         # conversion of that output value (from -100 to 100) to a physical rudder orientation
         constrainedPidValue = max(min(pidOutputValue, pidRightLimit), pidLeftLimit)
         rudderPos = lerp(constrainedPidValue, -100, 100, optimalTurnLeft, optimalTurnRight)
-       
+
         ################################
         #    SAIL CONTROL              #
         ################################
@@ -216,23 +216,23 @@ class SailsRudder():
         offWindAngle = coerceAngleToRange(self.apparentWindDirection, -180, 180)
         mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go, note right now it's always positive
         jibPos = mainPos
-        
+
         # correct sign- coordinate frame is same as rudder (+ is sails on port side)
         if offWindAngle < 0.0:
             mainPos = -mainPos
             jibPos = -jibPos
-        
+
         # Use the sails to help us steer to our desired course
         # Turn to the wind by pulling the mainsail in and freeing the jib
         # Turn away by pulling the jib in and freeing the mailsail
-        
+
         # Make the sign of course error associate negative with away from wind, and positive into wind
         # This lets the control loop evenly progress back and forth
         sailCourseError = courseError
-        
+
         if offWindAngle < 0.0:   #We're on starboard
             sailCourseError = -sailCourseError
-    
+
         # PI control
         sailPTerm = sailCourseError * self.sailP
         self.sailITerm += sailCourseError * self.sailI * controlInterval
@@ -240,7 +240,7 @@ class SailsRudder():
         # Prevent value from exceeding the maximum effect value at 100 (prevent integral windup)
         self.sailITerm = max(min(self.sailITerm, 100), -100)
         turnValue = sailPTerm + self.sailITerm
-      
+
         # The positions that given maximum turning torque from sails
         if mainPos > 0:
             maxOpenPose = min(mainPos + self.maxTurnOffset, self.maxSailEase)
@@ -248,7 +248,7 @@ class SailsRudder():
         else:
             maxOpenPose = max(mainPos - self.maxTurnOffset, -self.maxSailEase)
             maxClosePose = min(mainPos + self.maxTurnOffset, 0)
-        
+
         if turnValue > 0.0:
             # Sail more towards the wind
             mainPos = lerp(turnValue, 0, 100, mainPos, maxClosePose)
@@ -257,11 +257,11 @@ class SailsRudder():
             # Sail more away from the wind
             mainPos = lerp(-turnValue, 0, 100, mainPos, maxOpenPose)
             jibPos = lerp(-turnValue, 0, 100, jibPos, maxClosePose)
-        
+
         # To maximize flow around the sails, we keep the jib open at least some
         if abs(jibPos) < self.minClosedAngle:
             jibPos = -self.minClosedAngle if jibPos < 0 else self.minClosedAngle
-            
+
         # Now that calculations are done, since we can't control which way the sails go,
         # we only publish positive values for them
         mainPos = abs(mainPos)
@@ -269,7 +269,7 @@ class SailsRudder():
 
         #Is it a big enough change that we should republish?  This reduces servo jitters
         if (abs(mainPos - self.reqedMain) > self.mainTolerance or
-            abs(jibPos - self.reqedJib) > self.jibTolerance or 
+            abs(jibPos - self.reqedJib) > self.jibTolerance or
             abs(rudderPos - self.reqedRudder) > self.rudderTolerance):
           self.reqedMain = mainPos
           self.reqedJib = jibPos
@@ -278,8 +278,8 @@ class SailsRudder():
 
     def listener(self):
         rospy.init_node("sailsRudder")
-        rospy.Subscriber("/airmar_data", AirmarData, self.airmar_callback())
-        rospy.Subscriber("/nav_targets", NavTargets, self.tactics_callback())
+        rospy.Subscriber("/airmar_data", AirmarData, self.airmar_callback)
+        rospy.Subscriber("/nav_targets", NavTargets, self.tactics_callback)
         rospy.spin()
 
 if __name__ == "__main__":
