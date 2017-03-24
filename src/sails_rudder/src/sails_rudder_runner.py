@@ -34,10 +34,10 @@ def lerp(x, minX, maxX, minVal, maxVal):
 # If min angle to max angle is 360 degrees, then only modular arithmetic occurs
 # if min angle and max angle do not span 360 degrees, then the value is coerced
 # to the closer of the two angles.
-# coerceAngleToRange(0, 360, 720) = 360
-# coerceAngleToRange(-40, 0, 360) = 320
-# coerceAngleToRange(20, 100, 140) = 100
-def coerceAngleToRange(a, minA, maxA):
+# angleToRange(0, 360, 720) = 360
+# angleToRange(-40, 0, 360) = 320
+# angleToRange(20, 100, 140) = 100
+def angleToRange(a, minA, maxA):
     a = math.fmod(a, 360)
     modMinA = math.fmod(minA, 360)
     modMaxA = math.fmod(maxA, 360)
@@ -57,12 +57,24 @@ def coerceAngleToRange(a, minA, maxA):
         a -= math.trunc((a - minA) / 360) * 360
     return a
 
+def normalizeAngle(a):
+    while a <= -180:
+		a += 360
+	while a > 180:
+		a -= 360
+	return a
+
 class SailsRudder():
     def __init__(self):
         self.pub_sailsRudderPos = rospy.Publisher("/sails_rudder_pos", SailsRudderPos, queue_size = 10) #Set up our publisher
         self.reqedMain = 90.0 #"Requested" positions i.e. those that were last published
         self.reqedJib = 90.0 #Init is fully eased sails (avoids mechanical breakage?)
         self.reqedRudder = 0.0
+
+        # Previously calculated, but not necessarily requested positions
+        self.mainPos = 90.0
+        self.jibPos = 90.0
+        self.rudderPos = 0.0
 
         #CONSTANTS
         self.mainTolerance = 5.0 #The differences at which point we republish
@@ -83,13 +95,13 @@ class SailsRudder():
         # PID control of rudder for course correction
         self.lastUpdateTime = 0 # time.clock() value used to time PID loop
         self.previousInput = 0.0
-        # control coefficients, these may be a good start, but need to be empiracally determined for Racht
-        self.rudderP = 1.0
-        self.rudderI = 0.4
-        self.rudderD = 0.8
+        # control coefficients, optimized in simulation, hopefully just a constant factor off from what would be good for the real Racht
+        self.rudderP = 7.94447
+        self.rudderI = 0.25778
+        self.rudderD = 3.83347
         self.rudderITerm = 0.0
-        self.sailP = 1.2
-        self.sailI = 1.2
+        self.sailP = 8.90936
+        self.sailI = 0.39767
         self.sailITerm = 0.0
 
         self.rudderIDecay = 0.95 # decay factor per second of rudder integral when sails could contribute more
@@ -125,6 +137,13 @@ class SailsRudder():
         #    RUDDER CONTROL            #
         ################################
 
+        # Use straight back from the back of the boat as a reference point 0 for the rudder angle
+        # So a positive angle results in a left turn from the rudder, assuming forward motion
+
+        # Do not even attempt to sail into the wind
+        if abs(normalizeAngle(self.targetHeading - self.apparentWindDirection)) < self.minPointingAngle:
+            return
+
         # Calculate the limits of PID output values
 
         # Use the lower-bound of the rudder as a reference point 0.
@@ -134,7 +153,7 @@ class SailsRudder():
         # The angles of the rudder most effective at effecting rotation
         # are those that are at highTurnAngle to the velocity of the boat
         # n.b. velocityDirection is cog (course over ground)
-        leeway = compass_diff(self.boatHeading, self.velocityDirection)
+        leeway = normalizeAngle(self.velocityDirection - self.boatHeading)
 
         # The three cases below are that 1. there are good positions for the rudder to turn
         # 2. the boat is moving backwards, so the rudder can go the opposite direction
@@ -152,7 +171,7 @@ class SailsRudder():
             pidLeftLimit = lerp(turnLeftDirection, optimalTurnRight, optimalTurnLeft, 100, -100)
             pidRightLimit = lerp(turnRightDirection, optimalTurnRight, optimalTurnLeft, 100, -100)
         elif abs(leeway) >= 180 - self.rudderRange:
-            oppositeTurnCenter = compass_diff(math.fmod(self.boatHeading + 180, 360), self.velocityDirection)
+            oppositeTurnCenter = normalizeAngle(self.velocityDirection - (self.boatHeading + 180))
             optimalTurnLeft = oppositeTurnCenter - self.highTurnAngle
             optimalTurnRight = oppositeTurnCenter + self.highTurnAngle
             turnLeftDirection = max(optimalTurnLeft, -self.rudderRange)
@@ -181,7 +200,7 @@ class SailsRudder():
         # simulate some error in our ability to read our heading
         pidInput = self.boatHeading
 
-        courseError = coerceAngleToRange(pidSetpoint - pidInput, -180, 180)
+        courseError = angleToRange(pidSetpoint - pidInput, -180, 180)
 
         # Make adding to the rudder integral term conditional on the sails integral
         # term being maxed out. That gives preference to the sails fixing this kind of thing.
@@ -200,27 +219,30 @@ class SailsRudder():
         if self.rudderITerm >= pidRightLimit or self.rudderITerm <= pidLeftLimit:
             self.rudderITerm = max(min(self.rudderITerm, pidRightLimit), pidLeftLimit)
 
-        inputDerivative = coerceAngleToRange(pidInput - self.previousInput, -180, 180)
+        inputDerivative = angleToRange(pidInput - self.previousInput, -180, 180)
         pidOutputValue = courseError * self.rudderP + self.rudderITerm - inputDerivative * self.rudderD / controlInterval
         self.previousInput = pidInput
 
         # conversion of that output value (from -100 to 100) to a physical rudder orientation
         constrainedPidValue = max(min(pidOutputValue, pidRightLimit), pidLeftLimit)
-        rudderPos = lerp(constrainedPidValue, -100, 100, optimalTurnLeft, optimalTurnRight)
+        newRudderPos = lerp(constrainedPidValue, -100, 100, optimalTurnLeft, optimalTurnRight)
+
+        # Smoothen out the change to the rudder
+        self.rudderPos = lerp(4.0 * controlInterval, 0, 1, self.rudderPos, newRudderPos)
 
         ################################
         #    SAIL CONTROL              #
         ################################
         # the apparent wind direction is already relative to the boat heading. (relative to the physical sensor, that is)
         # make sails maximize force. See points of sail for reference.
-        offWindAngle = coerceAngleToRange(self.apparentWindDirection, -180, 180)
-        mainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go, note right now it's always positive
-        jibPos = mainPos
+        offWindAngle = angleToRange(self.apparentWindDirection, -180, 180)
+        newMainPos = lerp(abs(offWindAngle), self.minPointingAngle, self.runningAngle, 0.0, 90.0)  #A first (linear) approximation of where the sails should go, note right now it's always positive
+        newJibPos = newMainPos
 
         # correct sign- coordinate frame is same as rudder (+ is sails on port side)
         if offWindAngle < 0.0:
-            mainPos = -mainPos
-            jibPos = -jibPos
+            newMainPos = -newMainPos
+            newJibPos = -newJibPos
 
         # Use the sails to help us steer to our desired course
         # Turn to the wind by pulling the mainsail in and freeing the jib
@@ -242,38 +264,42 @@ class SailsRudder():
         turnValue = sailPTerm + self.sailITerm
 
         # The positions that given maximum turning torque from sails
-        if mainPos > 0:
-            maxOpenPose = min(mainPos + self.maxTurnOffset, self.maxSailEase)
-            maxClosePose = max(mainPos - self.maxTurnOffset, 0)
+        if newMainPos > 0:
+            maxOpenPose = min(newMainPos + self.maxTurnOffset, self.maxSailEase)
+            maxClosePose = max(newMainPos - self.maxTurnOffset, 0)
         else:
-            maxOpenPose = max(mainPos - self.maxTurnOffset, -self.maxSailEase)
-            maxClosePose = min(mainPos + self.maxTurnOffset, 0)
+            maxOpenPose = max(newMainPos - self.maxTurnOffset, -self.maxSailEase)
+            maxClosePose = min(newMainPos + self.maxTurnOffset, 0)
 
         if turnValue > 0.0:
             # Sail more towards the wind
-            mainPos = lerp(turnValue, 0, 100, mainPos, maxClosePose)
-            jibPos = lerp(turnValue, 0, 100, jibPos, maxOpenPose)
+            newMainPos = lerp(turnValue, 0, 100, newMainPos, maxClosePose)
+            newJibPos = lerp(turnValue, 0, 100, newJibPos, maxOpenPose)
         else:
             # Sail more away from the wind
-            mainPos = lerp(-turnValue, 0, 100, mainPos, maxOpenPose)
-            jibPos = lerp(-turnValue, 0, 100, jibPos, maxClosePose)
+            newMainPos = lerp(-turnValue, 0, 100, newMainPos, maxOpenPose)
+            newJibPos = lerp(-turnValue, 0, 100, newJibPos, maxClosePose)
 
         # To maximize flow around the sails, we keep the jib open at least some
-        if abs(jibPos) < self.minClosedAngle:
-            jibPos = -self.minClosedAngle if jibPos < 0 else self.minClosedAngle
+        if abs(newJibPos) < self.minClosedAngle:
+            newJibPos = -self.minClosedAngle if newJibPos < 0 else self.minClosedAngle
 
         # Now that calculations are done, since we can't control which way the sails go,
         # we only publish positive values for them
-        mainPos = abs(mainPos)
-        jibPos = abs(jibPos)
+        newMainPos = abs(newMainPos)
+        newJibPos = abs(newJibPos)
+
+        # Smoothen out the change to the sails
+        self.mainPos = lerp(4.0 * controlInterval, 0, 1, self.mainPos, newMainPos)
+        self.jibPos = lerp(4.0 * controlInterval, 0, 1, self.jibPos, newJibPos)
 
         #Is it a big enough change that we should republish?  This reduces servo jitters
-        if (abs(mainPos - self.reqedMain) > self.mainTolerance or
-            abs(jibPos - self.reqedJib) > self.jibTolerance or
-            abs(rudderPos - self.reqedRudder) > self.rudderTolerance):
-          self.reqedMain = mainPos
-          self.reqedJib = jibPos
-          self.reqedRudder = rudderPos
+        if (abs(self.mainPos - self.reqedMain) > self.mainTolerance or
+            abs(self.jibPos - self.reqedJib) > self.jibTolerance or
+            abs(self.rudderPos - self.reqedRudder) > self.rudderTolerance):
+          self.reqedMain = self.mainPos
+          self.reqedJib = self.jibPos
+          self.reqedRudder = self.rudderPos
           self.publish_positions() #Actually publish the request
 
     def listener(self):
