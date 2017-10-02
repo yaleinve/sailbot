@@ -8,24 +8,24 @@ import pdb
 import time
 #import mraa
 
-from servo_control.msg import ServoPos
+from sails_rudder.msg import SailsRudderPos
 
 if __name__ == '__main__':
     try:
         #Init the ros node
         rospy.init_node('serv_manual_pub')
-        pub = rospy.Publisher('/servo_pos', ServoPos, queue_size = 10)
+        pub = rospy.Publisher('/sails_rudder_pos', SailsRudderPos, queue_size = 10)
         while not rospy.is_shutdown():
-            manmsg = ServoPos()
+            manmsg = SailsRudderPos()
             val = input("Enter a main angle:")
             print("Main value received was : " + str(val) + '\n')
-            manmsg.main_angle = val
+            manmsg.mainPos = val
             val = input("Enter a jib angle:")
             print("Jib value received was : " + str(val) + '\n')
-            manmsg.jib_angle = val
+            manmsg.jibPos = val
             val = input("Enter a rudder angle:")
             print("Rudder value received was : " + str(val) + '\n')
-            manmsg.rudder_angle = val
+            manmsg.rudderPos = val
             print("Publishing now\n...\n")
             pub.publish(manmsg)
 

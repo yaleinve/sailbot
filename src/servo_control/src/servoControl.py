@@ -19,7 +19,7 @@ import numpy as np
 
 #CONFIG CONSTANTS
 debug = False         #This hijacks the relays so the board is always in the mode we want
-debug_auto =  False   #If we hijack, to we hijack into autonomous or RC mode?
+debug_auto = True   #If we hijack, to we hijack into autonomous or RC mode?
 
 #Ratchet Specifications: This is needed to map sail angles to sheet lengths
 #These measurements were taken with 5 holes showing in front of the mast step, shrouds in front hole of chainplate
@@ -32,7 +32,7 @@ boom_height = 3.5  #The vertical distance from the exit point of the main sheet 
 boom_length = 19.25  #The length from the gooseneck to the mainsheet attachment point along the boom, in inches
 boom_rplus = 0.0    #The horizontal length from the mainsheet attachment to the through hull.  If the through hull is further aft of than the mainsheet attachment, this value is POSITIVE
 club_height = 2.2   #The vertical distance from the exit of the jibsheet to the club, in inches
-club_length = 13.50 #The length from the club pivot to the jibsheet attachment point, in inches.
+club_length = 16.50 #The length from the club pivot to the jibsheet attachment point, in inches.
 club_rplus = 0.0    #Same as boom_rplus for jib club
 
 
