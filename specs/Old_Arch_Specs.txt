@@ -1,0 +1,228 @@
+InVe 2015-16			Eric Anderson (Mar 2015)
+
+InVe Sailboat Software Specifications
+
+Note: We need to adopt a UNIT STANDARD for the project
+Note: '~' in this document denotes questions or areas of incompleteness 
+Note: Interesting Timing Constraint- no node should cycle faster than the 
+	  fastest of the topics it subscribes to except for feedback control loops (is this true?)
+
+Document Contents:
+0) Basic Sailing Terminology
+1) Architecture Assumptions
+2) High Level Architecture Overview
+3) Ros Topics List
+4) Node specifications
+	a) Capn
+	b) Nav
+	c) SpeedCalc
+	d) Tactics
+	e) Helm
+	f) Trim
+
+
+0) Basic Sailing Terminology
+- This non-exhaustive list of definitions is intended to provide a basic 
+  reference for some of the terms mentioned in these specifications
+- Further questions can be answered by talking to the sailors on the team (
+  Eric, Jack, Josh, Larry, to name a few) or by googling, although I would recommend the former.
+
+Definitions:
+
+"Compass Direction" : informally used here to mean the angle between a direction vector and magnetic north, measured CLOCKWISE in degrees (90 deg corresponds to east).
+
+Wind Direction: The direction that the wind is COMING FROM, measured as a compass direction.
+
+True Wind: the wind felt when not moving relative to the Earth
+
+Apparent Wind: the wind felt when moving relative to the Earth
+
+Course: a) The intended direction of travel of the boat, measured as a compass direction b) The area of water in which sailing will occur (i.e. the racecourse)  Course Over Ground, or COG, is the compass heading of the boat as determined from the derivative of gps coordinates
+
+(Absolute) Bearing: the compass direction from your current position to a specific target (From New Haven, NYC's bearing ~ 270deg)
+
+Heading: The compass direction the boat is pointing (note this isn't nec. the same as the direction it is moving)
+
+Rhumbline: A virtual line (ex: on a map) connecting a starting point to a goal location.  For our purposes, we can think of this line as a 'straight' line between the two points.  The technical definition is a line of constant bearing, (loxodrome), not a line on a great circle from point to point (orthodrome).  Gotta love spherical coordinates.
+
+VMG: "Velocity Made Good"- the component of velocity in the direction of the course.  ex: if you travel northeast when you want to go east, your vmg is speed*cos(45)
+
+XTE: "Cross Track Error": Given a rhumbline, the current (perpindicular) distance from that line.
+
+
+1) Architecture Assumptions:
+
+-Running on ROS
+-No image processing (although this can easily be added later)
+-Three independent servos: jib,main,rudder
+-All sensor data is parsed/formatted/published by low-level ROS nodes not 
+ described here
+-All sensor data is sufficient resolution- no noise/roughness handling in 
+ these algorithms)
+-Actual Sensors include:
+	- Airmar- windspeed/direction, roll
+	- gps
+
+2) High Level Architecture Overview
+
+- Several ROS nodes doing high level navigation/routing/speed analysis tasks:
+	- Nodes: captain, navigator, speed_calculator
+
+- A Mid-level leg-planner that interprets the high-level nav in a local context
+	- Node: tactics
+
+- Two ROS nodes determining desired servo output:
+	- Nodes: helm, trim
+
+3) List of Topics
+
+   - airmar_data    
+       apWndSpd: double
+       apWndDir: double 
+       amrRoll: double 
+       truWndSpd: double
+       truWndDir: double
+       heading:  double //The compass direction that the bow is pointing
+
+   -gps_data		//As of 11/2015 this is coming from airmar as well.  It may still be useful to think of as a separate message...
+     lat:
+     long:
+
+   - rudder_pos	   //The current rudder position (can overwrite to move rudder)
+   		angle: int   //angle should range from [-RUDDERMAX,RUDDERMAX]
+
+   - sail_pos	     // " " jib and main position (" " " " sails)
+   		~~~?
+
+   - competition_info    //The current competition mode and associated 
+   	mode:enum	        //parameters.  Updated by humans via message
+      	xte_min: float       //xte bounds. xte_min is the port side xte bound xte_max is the 
+                             starboard side xte bound
+      	xte_max: float
+      	gps_lat1:float      //gps points (up to four of them)
+   	gps_long1:float
+   	gps_lat2:float
+      	gps_long2:float
+      	gps_lat3:float
+      	gps_long3:float
+      	gps_lat4:float
+      	gps_long4:float
+
+   - leg_info        //The gps coordinates of starting and ending points of 
+        begin: (lat,long) the current leg, and the max/min permissable XTE
+        end: (lat,long)
+        leg_course: double    //used in speed_calculator for determining XTE.
+        xte_min: double       //xte bounds. xte_min is the port side xte bound xte_max is the 
+        xte_max: double       //starboard side xte bound
+        
+   - manual_mode         //Whether or not manual control is being used
+        manual: bool
+
+   - speed_calculator //The current speed, VMG,XTE,VMG upwind/downwind
+      cog: double     //Course over ground, these probably come computed from the airmar at this point...
+      sog: double     //Speed over ground
+      VMG: double
+      VMGup: double
+      XTE: double
+      truWnd_dir      //True wind direction as calculated through vector subtraction
+      truWnd_spd      // " " "  " speed " " " "
+
+   - target_course  		//The long-term course goal as a compass direction and range
+   	   course: double	
+   	   range: double
+
+   - target_heading		//The target heading for the helmsman to steer to.
+        heading:int 	
+        state: enum        
+
+4) Node Specifications
+
+a) captain
+   Subscriptions: speed_calculator, manual_mode, competition_info, gps_data
+   Publications:  leg_info
+
+   Description: Determines the leg that the Bot should sail.  If the previous leg is completed (also determined by capn, based on cartesian distance to end of leg + fidelity of gps), publishes the next leg
+
+   later: If manual mode is enabled, disables all high-level ROS nodes except for Trim.  ~~Basic data collection can also be disabled(?).
+
+   If manual mode is disabled, enables all high-level ROS nodes (if they weren't on already) and determine the first leg (written to leg_info) using competition_info.mode as such:
+   
+   HoldCourse: given course, sail it indefinitely
+   Waypoint mode: create a leg from current position directly to gpsTarg1
+   RoundAndReturn mode: use gpsTarg1 as a windward mark,gpsTarg2 as a return 
+   		point. Create multiple legs to sail AROUND the mark (don't hit it!).  Set leg_info to the first leg.  When the first leg is complete, move on to the second leg, etc.
+   StationKeeping mode: To be implemented at end, algorithm to be discussed at 
+   		later date.
+
+b) navigator
+   Subscriptions: leg_info, gps_data
+   Publications: target_course
+
+   Description: Publishes to target_course a global course (compass heading) and distance to the target from the current position given leg_info.end .  Can run at 1Hz or slower, especially when very far from target location.
+
+   Notes: Given two gps coordinates (the target and the current position), it is straightforward to calculate the distance of a straight line between the two points and its heading.
+
+   When the boat is very far from its target, the course and range will not change quickly.  Therefore, the node can run at few cycles than when the boat is nearby the target.  This only needs to be implemented if the entire
+   architecture runs too slowly (don't  implement in first iteration)
+
+c) speed_calculator
+
+   Subscriptions: target_course, leg_info, airmar_data, gps_data
+   Publications:  speedStats 
+
+   Description: Publishes useful speed derivatives to speedStats.  
+
+   Statistics to be calculated and published include:
+
+   COG - The compass direction the boat is traveling based on gps
+
+   SOG - The speed as calculated by dx/dt where x is gps position
+
+   VMG (to waypoint): The component of the velocity in the direction of target_course.course .
+
+   VMG upwind: Calculate the component of velocity in the wind direction of the true wind (n.b. if wind blows North to South, moving North at speed x results in VMGup of x, NOT -x)
+
+   XTE:  The shortest distance from the current position to the line connecting the beginning and end points of the leg as stored in leg_info.  This number is useful to enforce tacking at certain points when sailing upwind. Define XTE as negative when the position of the boat is 
+
+d) tactics
+
+   DON'T FORGET: All compass arithmetic is done mod 360!!!
+
+Subscriptions: target_course, airmar_data, speed_stats, leg_info
+   Publications: target_heading
+   Description:
+   (First Iteration): Outputs a target heading and state (Beating/Running/Reaching) for Helm to steer to.  This heading is usually the course published in target_course, with the following exceptions:
+       1) Beating: If the target course is within POINTING_ANGLE (probably about 50 deg) of true wind direction, define PORT as true wind direction + POINTING_ANGLE and STBD as true wind direction - POINTING_ANGLE.  Set heading to PORT or STBD, whichever is closer to current heading.  If sailing PORT and XTE > XTE_MAX, set heading to STBD.  If sailing STBD and XTE < -XTE_MAX then set heading to PORT.  This implicitly implements tacking.
+
+       2)Running: Similar to Beating, except " " if (target course + 180) is within RUNNING_ANGLE (probably about 15 deg) of true wind direction, " " " " PORT as true wind direction + 180 - RUNNING_ANGLE " " STBD as true wind direction + 180 + RUNNING_ANGLE.
+
+
+
+   (Later Iterations, if needed):  
+   - Implement coordinated action between Helm, Trim, and Tactics.  Possibly better performance for tacking/jibing, also could help heaving to/getting out of irons.
+   - Implement adjustment for set/drift, especially if traveling across the wind.
+   - Implement ML to choose best upwind/downwind heading
+
+
+e) helm
+   Subscriptions: airmar_data, target_heading, (later: speedStats?)
+   Publications: rudderPos
+
+   Description:  Using current heading from airmar_data and target heading from target_heading, use feedback control (PID?) to change the rudder position such that the current heading = target heading.
+   
+   (Later Iterations): given target_heading state, use ML/optimization to maximize either VMGup (BEATING), -(VMGup) (RUNNING), or VMG (REACHING)
+
+f) trim
+   Subscriptions: airmar_data
+   Publications: sailPos
+
+   Description: Based off of apparent wind angle (from or derived from airmar) and apparent wind speed, output main and jib sail positions.
+   Implement Capsize Prevention: if  roll > CAPSIZE_TOL then release sails.
+
+   First Iteration: Use quantized sail positions, perhaps 10 of them for the entire range.  Empirically determine good values. Trim does not listen to helm at all (steering is done only with rudder)
+
+   One Improvement: Use ML/optimization to achieve optimal sail trim for a given apparent wind angle/windspeed.
+
+   Another Improvement: Trim listens to Helm saying (I'm trying to head up/down) and adjusts its optimal output accordingly to create desireable helm imbalance
+
+   Another Improvement: Trim and Helm converse about tradeoff between rudder correction and helm correction for straight course to optimize SOG
