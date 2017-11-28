@@ -59,10 +59,10 @@ def angleToRange(a, minA, maxA):
 
 def normalizeAngle(a):
     while a <= -180:
-		a += 360
-	while a > 180:
-		a -= 360
-	return a
+        a += 360
+    while a > 180:
+        a -= 360
+    return a
 
 class SailsRudder():
     def __init__(self):
