@@ -8,7 +8,6 @@ import roslib
 import rospy
 import sys
 import Queue
-import mraa
 import math
 
 from compassCalc import *
@@ -16,6 +15,7 @@ from gpsCalc import *    #import all the gps functions
 from captain.msg import LegInfo  #Publish to this
 from captain.msg import CompetitionInfo      #User input
 from captain.msg import AutonomousStatus
+from captain.srv import *
 from airmar.msg import AirmarData
 
 #Waypoint class allows us to easily handle legs in a journey
@@ -41,17 +41,12 @@ class Captain():
         self.truWndDir = 0.0
         self.currentHeading = 0.0
 
-        #Autonomous pins from RC
-        self.autonomousPin = mraa.Aio(1)  #The analog pin number for aux 1
-        self.auxDivide = 50               #A good dividing line (in 1024 bit adc units) to determine between high and low switch)
         self.currentlyAutonomous = False  #Default into manual on boot (so if in manual during startup we don't lose control)
 
-        #Relay pins
-        self.sailRelayPin =  mraa.Gpio(4)    #Pin 4 is sail relays
-        self.sailRelayPin.dir(mraa.DIR_OUT)
-        self.rudderRelayPin = mraa.Gpio(2)   #Pin 2 is rudder relay
-        self.rudderRelayPin.dir(mraa.DIR_OUT)
-
+        rospy.wait_for_service('get_auto_pin', 10)
+        rospy.wait_for_service('set_relays_auto', 1)
+        self.getAutoPinSrv = rospy.ServiceProxy('get_auto_pin', GetAutoPin, persistent=True)
+        self.setRelaysAutoSrv = rospy.ServiceProxy('set_relays_auto', SetRelaysAuto, persistent=True)
 
         # Our publisher for leg data to the navigator
         self.pub_leg = rospy.Publisher("/leg_info", LegInfo, queue_size = 10)
@@ -288,22 +283,20 @@ class Captain():
         #TODO: might want to switch these- consider case when controller is turned off.  We want to default to autonomous, right?
         #rospy.loginfo('[captain debug]: aux 1 read is : ' + str(self.autonomousPin.read()))
         #Manual Mode
-        if (self.autonomousPin.read() < self.auxDivide):
+        if not self.getAutoPinSrv().auto:
             #If we just switched modes
-            if self.currentlyAutonomous == True:
+            if self.currentlyAutonomous:
                 rospy.loginfo('[captain] switching into manual mode')
                 self.currentlyAutonomous = False
-                self.rudderRelayPin.write(0)
-                self.sailRelayPin.write(0)
+                self.setRelaysAutoSrv(False)
                 self.publish_autonomous()
         #Autonomous mode
         else:
             #If we just switched modes
-            if self.currentlyAutonomous == False:
+            if not self.currentlyAutonomous:
                 rospy.loginfo('[captain] Switching into autonomous mode')
                 self.currentlyAutonomous = True
-                self.rudderRelayPin.write(1)
-                self.sailRelayPin.write(1)
+                self.setRelaysAutoSrv(True)
                 self.publish_autonomous()
 
                 #For station keeping, we'll start the five minute timer when we go into autonomous mode
@@ -365,8 +358,4 @@ class Captain():
 
 if __name__ == "__main__":
     cap = Captain()
-    try:
-        cap.listener()
-    except KeyboardInterrupt:
-        self.rudderRelayPin.write(0)
-        self.sailRelayPin.write(0)
+    cap.listener()
