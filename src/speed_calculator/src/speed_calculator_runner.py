@@ -1,122 +1,101 @@
 #!/usr/bin/env python
-import time
-import roslib
 import rospy
-import sys
-from math import radians, cos, sin, asin, sqrt, atan2, degrees, sqrt
-
 
 from gpsCalc import *
-from navigator.msg import TargetCourse
 from captain.msg import LegInfo
-from airmar.msg import AirmarData 
+from airmar.msg import AirmarData
 from speed_calculator.msg import SpeedStats
 
 
-#GLOBALS
-cog = 0.0
-sog = 0.0
-lat = 0.0
-lon = 0.0
-pub_stats = rospy.Publisher("/speed_stats", SpeedStats, queue_size = 10)
+class SpeedCalculator:
+    def __init__(self):
+        # For airmar callback
+        self.lat = 0.0
+        self.long = 0.0
+        self.truWndDir = 0.0
+        self.truWndSpd = 0.0
+        self.cog = 0.0
+        self.sog = 0.0
 
-#from leg_info to calculate xte
-leg_start_lat = 0.0
-leg_start_long = 0.0
- 
-#airmar sensor variables to be used in publish_speed_stats()
-apWndSpd = 0.0
-apWndDir = 0.0
-twind_dir = 0.0
-twind_spd = 0.0
+        # For leg info callback (captain output)
+        self.leg_course = 0.0
+        self.leg_start_lat = 0.0
+        self.leg_start_long = 0.0
+        self.end_lat = 0.0
+        self.end_long = 0.0
 
-#target_course variables to be used in calculating XTE
-target_range = 0.0
-target_course = 0.0
+        self.publisher = rospy.Publisher("/speed_stats", SpeedStats, queue_size=10)
 
-leg_course = 0.0
+    def airmar_data_callback(self, data):
+        self.lat = data.lat
+        self.long = data.long
+        self.truWndDir = data.truWindDir
+        self.truWndSpd = data.truWindSpd
+        self.cog = data.cog
+        self.sog = data.sog
+
+        self.publish()
+
+    def leg_info_callback(self, data):
+        self.leg_course = data.leg_course
+        self.leg_start_lat = data.begin_lat
+        self.leg_start_long = data.begin_long
+        self.end_lat = data.end_lat
+        self.end_long = data.end_long
+
+        self.publish()
+
+    def publish(self):
+        msg = SpeedStats()
+        msg.vmg = self.calc_vmg()
+        msg.vmgup = self.calc_vmgup()
+        msg.xte = self.calc_xte()
+
+        self.publisher.publish(msg)
+
+    # CALCULATION FUNCTIONS
+    # returns the scalar projection of the vector (magnitude direction) onto course.
+    @staticmethod
+    def vector_projection(magnitude, direction, course):
+        direction, course = list(map(radians, [direction, course]))
+        return cos(direction - course) * magnitude
+
+    # returns a (magnitude,angle) representation of the vector sum
+    @staticmethod
+    def vector_add(mag1, angle1, mag2, angle2):
+        angle1, angle2 = list(map(radians, [angle1, angle2]))
+        x = mag1 * cos(angle1) + mag2 * cos(angle2)
+        y = mag1 * sin(angle1) + mag2 * sin(angle2)
+        ret_mag = sqrt(x * x + y * y)
+        ret_angle = (degrees(atan2(y, x))) % 360.0
+        return ret_mag, ret_angle
+
+    # calculate XTE from a target course and range given an intial course we wanted to sail from.
+    # this will be negative when you are to the left of the leg_course vector (i.e. your t_course is
+    # between 0 and 180 degrees and visa versa)
+    @staticmethod
+    def _calculate_xte(t_range, t_course, l_course):
+        angle = (t_course - l_course) % 360
+        angle = (-1 * angle) if (angle <= 180) else (360 - angle)
+        xte = sin(radians(angle)) * t_range
+        return xte
+
+    def calc_vmg(self):
+        return self.vector_projection(self.sog, self.cog, self.leg_course)
+
+    def calc_vmgup(self):
+        return -1.0 * self.vector_projection(self.sog, self.cog, self.truWndDir)  # Wind vector is in opposite direction of positive VMGup!!
+
+    def calc_xte(self):
+        target_course = gpsBearing(self.lat, self.long, self.end_lat, self.end_long)
+        target_range = gpsDistance(self.lat, self.long, self.end_lat, self.end_long)
+        return self._calculate_xte(target_range, target_course, self.leg_course)
 
 
-#returns the scalar projection of the vector (magnitude direction) onto course.
-def vector_projection(magnitude, direction, course):
-  direction, course = list(map(radians, [direction, course]))
-  return(cos(direction - course) * magnitude)
-
-#returns a (magnitude,angle) representation of the vector sum
-def vector_add(mag1,angle1,mag2,angle2):
-  angle1, angle2 = list(map(radians,[angle1, angle2]))
-  x = mag1*cos(angle1) + mag2*cos(angle2) 
-  y = mag1*sin(angle1) + mag2*sin(angle2)
-  retMag = sqrt(x*x + y*y)
-  retAngle = (degrees(atan2(y,x))) % 360.0
-  return (retMag,retAngle)
-
-
-#calculate XTE from a target course and range given an intial course we wanted to sail from.
-#this will be negative when you are to the left of the leg_course vector ie(your t_course is 
-#between 0 and 180 degrees and visa versa)
-def calculate_xte(t_range, t_course, l_course):
-  angle = (t_course - l_course) % 360
-  angle = (-1 * angle) if (angle <= 180) else (360 - angle)
-  xte = sin(radians(angle)) * t_range
-  return xte
-  
-#This is called every time we get new gps and contains all the calculations 
-#for the node except for cog and sog, which are done in gps_data_callback()
-def publish_speed_stats():
-  rospy.loginfo('[speed_calculator] entered pub, data:')
-  rospy.loginfo('[speed_calculator]   cog: ' + str(cog) + ', sog: ' + str(sog))
-  speed_stats = SpeedStats()
-
-  #Calculations
-  speed_stats.cog = cog
-  speed_stats.sog = sog
-  speed_stats.truWndDir = 0.0 #truWndDir   #Can hardcode a value instead of using a fan!
-  speed_stats.truWndSpd = 2.0 #truWndSpd   #Same as above
-  speed_stats.VMG = vector_projection(sog, cog, leg_course)
-  speed_stats.VMGup = -1*vector_projection(sog, cog, truWndSpd)  #Wind vector is in opposite direction of positive VMGup!!
-  speed_stats.XTE = calculate_xte(target_range, target_course, leg_course)
-  pub_stats.publish(speed_stats)
-
-def leg_info_callback(data):
-  global leg_course
-  global leg_start_lat
-  global leg_start_long
-  #rospy.loginfo('[speed_calculator] im in leg_info_callback')
-  leg_course = data.leg_course
-  leg_start_lat = data.begin_lat
-  leg_start_long = data.begin_long
-
-def target_course_callback(data):
-  global target_course
-  global target_range
-
-  #rospy.loginfo('[speed_calculator] im in target_course_callback')
-  target_course = data.course
-  target_range = data.range
-
-def airmar_callback(data):
-  global truWndDir
-  global truWndSpd
-  global cog
-  global sog
-  global lat
-  global long
-
-  lat = data.lat
-  long = data.long
-  truWndDir = data.truWndDir
-  truWndSpd = data.truWndSpd
-  cog = data.cog  
-  sog = data.sog
-
-  publish_speed_stats()
-
-def listener():
-  rospy.init_node("speed_calculator")
-  rospy.Subscriber("/target_course", TargetCourse, target_course_callback)
-  rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
-  rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
-  rospy.spin()
-if __name__ == "__main__":
-  listener()
+if __name__ == '__main__':
+    rospy.init_node('speed_calculator')
+    spd = SpeedCalculator()
+    rospy.Subscriber('/airmar_data', AirmarData, spd.airmar_data_callback)
+    rospy.Subscriber('/leg_info', LegInfo, spd.leg_info_callback)
+    rospy.loginfo('[speed_calculator] Started node')
+    rospy.spin()

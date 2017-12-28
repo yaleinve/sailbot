@@ -8,6 +8,3 @@ float64               truWndSpd
 float64               truWndDir
 float64               lat
 float64               long
-float64               XTE
-float64               VMG
-float64               VMGup

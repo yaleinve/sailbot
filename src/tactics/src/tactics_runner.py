@@ -2,9 +2,7 @@
 # tactics.py              Eric Anderson Mar 2015
 
 #Import statements
-import roslib
 import rospy
-import sys
 import time
 from compassCalc import *
 from gpsCalc import *
@@ -12,6 +10,7 @@ from gpsCalc import *
 #Import the signatures/headers for the message types we have created
 from tactics.msg import NavTargets
 from airmar.msg import AirmarData
+from speed_calculator.msg import SpeedStats
 from captain.msg import LegInfo
 
 pub_tactics = rospy.Publisher("/nav_targets", NavTargets, queue_size = 10)
@@ -139,9 +138,6 @@ def airmar_callback(data):
   global heading
   global apWndSpd
   global apWndDir
-  global xte
-  global vmg
-  global vmgUp
   global cog
   global sog
   global truWndDir
@@ -153,20 +149,30 @@ def airmar_callback(data):
   heading  = data.heading
   apWndSpd = data.apWndSpd
   apWndDir = data.apWndDir
-  xte = data.XTE
-  vmg = data.VMG
-  vmgUp = data.VMGup
   cog = data.cog
   sog = data.sog
   truWndDir = data.truWndDir
   currentLat = data.lat
   currentLong = data.long
 
-  #This is all that the old navigator node did:
+  # This is all that the old navigator node did:
   target_course = gpsBearing(currentLat, currentLong, legEndLat, legEndLong)
   target_range =  gpsDistance(currentLat, currentLong, legEndLat, legEndLong)
 
-  publish_tactics()  #We publish every time the airmar updates
+  # No need to publish here, because speed_stats_callback will be called very soon
+
+
+def speed_stats_callback(data):
+  global xte
+  global vmg
+  global vmgUp
+
+  xte = data.XTE
+  vmg = data.VMG
+  vmgUp = data.VMGup
+
+  publish_tactics()  # We publish every time the airmar updates
+
 
 #Only need a few things from leg_info
 def leg_info_callback(data):
@@ -185,6 +191,7 @@ def listener():
 
   rospy.init_node("tactics")  #Must init node to subscribe
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
+  rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
   rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
 
   rospy.spin()
