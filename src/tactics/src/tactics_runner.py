@@ -186,6 +186,7 @@ def listener():
   rospy.init_node("tactics")  #Must init node to subscribe
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
   rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
+  rospy.loginfo("[tactics] All subscribed, tactics has started!")
 
   rospy.spin()
 
