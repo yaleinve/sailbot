@@ -89,7 +89,7 @@ Custom Message Types:
   sails_rudder/SailsRudderPos:
     float64 mainPos
     float64 jibPos
-    float64 rudderPos
+    float64 rudderPos  # Positive rudder position seems to be clockwise when viewed from above / left turn when moving forwards, but TODO: should check this
 
 
 Node Specifications
