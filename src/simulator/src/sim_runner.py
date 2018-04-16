@@ -6,7 +6,7 @@
 import rospy
 import math
 
-from lib import gpsCalc
+import gpsCalc
 from sails_rudder.msg import SailsRudderPos
 from airmar.msg import AirmarData
 
@@ -43,6 +43,7 @@ class Simulator:
         rospy.init_node('simulator')
         rospy.Subscriber('/sails_rudder_pos', SailsRudderPos, self.sails_rudder_callback)
         self.pub = rospy.Publisher('/airmar_data', AirmarData, queue_size=10)
+        rospy.loginfo("[simulator] All subscribed, simulator has started!")
 
         sim_rate = rospy.Rate(1 / self.dt)  # Hz
         step_num = 0
@@ -54,6 +55,7 @@ class Simulator:
 
     def sails_rudder_callback(self, msg):
         # TODO: Add something to account for time to move servos
+        rospy.loginfo("[simulator] Received sails_rudder message " + msg)
         self.set_main = msg.mainPos + self.sail_adjust
         self.set_jib = msg.jibPos + self.sail_adjust
         self.set_rudder = msg.rudderPos + self.sail_adjust
@@ -61,6 +63,9 @@ class Simulator:
     def physics_step(self):
         # Numerical integration procedure based on https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
         self.update_sails()
+        # These are called force and torque in calc_accelerations, so I'm not
+        # sure if the inertia is included properly, but this is how the Go
+        # version did it
         accel, alpha = self.calc_accelerations()
         self.v = self.v.add(accel.mult(self.dt / 2))
         self.w = self.w.add(alpha.mult(self.dt / 2))
@@ -83,6 +88,7 @@ class Simulator:
         msg.truWndSpd, msg.truWndDir = self.wind.to_polar()
         # Reasonably hoping that simulation distances never become large enough for spherical geometry to create serious problems
         msg.lat, msg.long = gpsCalc.gpsVectorOffset(0.0, 0.0, self.pos.xy_angle(), self.pos.mag())
+        rospy.loginfo("[simulator] Publishing airmar message " + msg)
         self.pub.publish(msg)
 
     def update_sails(self):
@@ -148,7 +154,27 @@ class Simulator:
 
         grav_force = Vector(0, 0, 50)
 
+        ap_wind_vec = self.ap_wind().neg()  # Direction wind is moving, not coming from
+        main_force = Vector.from_polar(1, self.w.z + self.main).normal().vector_proj(ap_wind_vec).mult(main_constant)
+        jib_force = Vector.from_polar(1, self.w.z + self.jib).normal().vector_proj(ap_wind_vec).mult(jib_constant)
+        keel_force = Vector.from_polar(1, self.w.z).normal().vector_proj(self.v.neg()).mult(keel_constant)
+        axial_drag = Vector.from_polar(1, self.w.z).normal().vector_proj(self.v.neg().comp_mult(self.v.comp_abs())).mult(axial_friction)
+        forward_drag = self.v.neg().comp_mult(self.v.comp_abs()).mult(forward_friction)
+        rudder_force = Vector.from_polar(1, self.w.z + self.set_rudder).normal().vector_proj(self.v.neg()).mult(rudder_constant)
 
+        main_torque = inverse_moment_inertia.comp_mult(main_center.cross(main_force))
+        jib_torque = inverse_moment_inertia.comp_mult(jib_center.cross(jib_force))
+        keel_torque = inverse_moment_inertia.comp_mult(keel_center.cross(keel_force))
+        rudder_torque = inverse_moment_inertia.comp_mult(rudder_center.cross(rudder_force))
+
+        angular_drag_torque = self.w.neg().comp_mult(self.w.comp_abs()).mult(angular_friction)
+        mass_center = Vector.null()
+        mass_center.x, mass_center.z = rotate(base_mass_center.x, base_mass_center.z, self.w.y)
+        gravity_torque = inverse_moment_inertia.comp_mult(mass_center.cross(grav_force))
+
+        forces = main_force.add(jib_force).add(keel_force).add(rudder_force).add(axial_drag).add(forward_drag)
+        torques = main_torque.add(jib_torque).add(keel_torque).add(rudder_torque).add(gravity_torque).add(angular_drag_torque)
+        return forces, torques
 
     # Get apparent wind vector (not a field, because it would be a pain to relcalculate it whenever velocity is updated)
     def ap_wind(self):
@@ -189,7 +215,7 @@ class Vector:
         return math.sqrt(pow(self.x, 2) + pow(self.y, 2) + pow(self.z, 2))
 
     def xy_angle(self):
-        return math.degrees(math.atan(self.y / self.x))
+        return math.degrees(math.atan2(self.y, self.x))
 
     def to_polar(self):
         return self.mag(), self.xy_angle()
@@ -197,6 +223,12 @@ class Vector:
     # Should only be called on vectors that represent angles in degrees
     def normalize_angles(self):
         self.x, self.y, self.z = [a % 360 for a in (self.x, self.y, self.z)]
+
+    def neg(self):
+        return self.mult(-1)
+
+    def comp_abs(self):
+        return Vector(abs(self.x), abs(self.y), abs(self.z))
 
     def add(self, v):
         return Vector(self.x + v.x, self.y + v.y, self.z + v.z)
@@ -226,6 +258,10 @@ class Vector:
         new = Vector(0, 0, self.z)
         new.x, new.y = rotate(self.x, self.y, a)
         return new
+
+    # Counterclockwise normal in 2D
+    def normal(self):
+        return Vector(-self.y, self.x, 0);
 
 
 # Return angle in -180 to 180 range that is equivalent to input angle
