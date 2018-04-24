@@ -167,9 +167,9 @@ def speed_stats_callback(data):
   global vmg
   global vmgUp
 
-  xte = data.XTE
-  vmg = data.VMG
-  vmgUp = data.VMGup
+  xte = data.xte
+  vmg = data.vmg
+  vmgUp = data.vmgup
 
   publish_tactics()  # We publish every time the airmar updates
 
