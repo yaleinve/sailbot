@@ -309,7 +309,7 @@ class Captain():
         self.currentLat = data.lat
         self.currentLong = data.long
         self.currentHeading = data.heading
-        rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
+        # rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
 
     #Every time new competition info comes in, we must re-route everything
     def competition_info_callback(self,data):
