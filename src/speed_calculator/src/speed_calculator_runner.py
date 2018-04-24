@@ -29,8 +29,8 @@ class SpeedCalculator:
     def airmar_data_callback(self, data):
         self.lat = data.lat
         self.long = data.long
-        self.truWndDir = data.truWindDir
-        self.truWndSpd = data.truWindSpd
+        self.truWndDir = data.truWndDir
+        self.truWndSpd = data.truWndSpd
         self.cog = data.cog
         self.sog = data.sog
 
