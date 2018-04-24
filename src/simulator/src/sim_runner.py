@@ -55,7 +55,7 @@ class Simulator:
 
     def sails_rudder_callback(self, msg):
         # TODO: Add something to account for time to move servos
-        rospy.loginfo("[simulator] Received sails_rudder message " + msg)
+        rospy.loginfo("[simulator] Received sails_rudder message " + str(msg))
         self.set_main = msg.mainPos + self.sail_adjust
         self.set_jib = msg.jibPos + self.sail_adjust
         self.set_rudder = msg.rudderPos + self.sail_adjust
@@ -88,7 +88,7 @@ class Simulator:
         msg.truWndSpd, msg.truWndDir = self.wind.to_polar()
         # Reasonably hoping that simulation distances never become large enough for spherical geometry to create serious problems
         msg.lat, msg.long = gpsCalc.gpsVectorOffset(0.0, 0.0, self.pos.xy_angle(), self.pos.mag())
-        rospy.loginfo("[simulator] Publishing airmar message " + msg)
+        # rospy.loginfo("[simulator] Publishing airmar message " + str(msg))
         self.pub.publish(msg)
 
     def update_sails(self):
