@@ -145,6 +145,8 @@ def airmar_callback(data):
   global currentLong
   global target_course
   global target_range
+  global legEndLat
+  global legEndLong
 
   heading  = data.heading
   apWndSpd = data.apWndSpd
