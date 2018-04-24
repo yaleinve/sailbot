@@ -72,9 +72,10 @@ class SailsRudder():
         self.reqedRudder = 0.0
 
         # Previously calculated, but not necessarily requested positions
-        self.mainPos = 90.0
-        self.jibPos = 90.0
-        self.rudderPos = 0.0
+        # Unreasonable numbers to force publishing on first cycle
+        self.mainPos = -9999.9
+        self.jibPos = -9999.9
+        self.rudderPos = -9999.9
 
         #CONSTANTS
         self.mainTolerance = 5.0 #The differences at which point we republish
