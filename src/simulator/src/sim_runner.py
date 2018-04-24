@@ -89,6 +89,8 @@ class Simulator:
         msg.truWndSpd, msg.truWndDir = self.wind.to_polar()
         # Reasonably hoping that simulation distances never become large enough for spherical geometry to create serious problems
         msg.lat, msg.long = gpsCalc.gpsVectorOffset(0.0, 0.0, self.pos.xy_angle(), self.pos.mag())
+        msg.lat += 41.256243
+        msg.long += -72.850389
         # rospy.loginfo("[simulator] Publishing airmar message " + str(msg))
         self.pub.publish(msg)
 
