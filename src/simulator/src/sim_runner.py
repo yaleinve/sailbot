@@ -51,6 +51,7 @@ class Simulator:
             self.physics_step()
             if step_num % int(self.feedback_interval / self.dt) == 0:
                 self.publish_feedback()
+            step_num += 1
             sim_rate.sleep()
 
     def sails_rudder_callback(self, msg):
