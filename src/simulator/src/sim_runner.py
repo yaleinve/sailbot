@@ -99,25 +99,26 @@ class Simulator:
 
         # Wind direction, expressed in sail position conventions (bow->rudder is 0; positive is clockwise when viewed
         # from above; -180 to 180). This is the "equilibrium position" the wind is trying to push the sails to.
-        wind_rel_dir = angle_180_range(self.ap_wind().xy_angle() - self.ang.xy_angle())
+        wind_rel_dir = angle_180_range(self.rel_wind().xy_angle() + 180)
         # Is the equilibrium position within the sail bounds?
-        wind_pos_possible = max_sail_pos >= wind_rel_dir >= -max_sail_pos
+        main_pos_possible = self.set_main >= wind_rel_dir >= -self.set_main
+        jib_pos_possible = self.set_jib >= wind_rel_dir >= -self.set_jib
         # Reperesents directions sails will be pushed by wind -- if positive, sail will be pushed in postive direction
-        main_off_wind = angle_180_range(self.set_main - wind_rel_dir)
-        jib_off_wind = angle_180_range(self.set_jib - wind_rel_dir)
+        main_off_wind = angle_180_range(self.main - wind_rel_dir)
+        jib_off_wind = angle_180_range(self.jib - wind_rel_dir)
 
-        if main_off_wind * (wind_rel_dir - self.set_main) > 0 and wind_pos_possible:
+        if main_off_wind * (wind_rel_dir - self.set_main) > 0 and main_pos_possible:
             # If wind is pushing sail toward the equilibrium position, and that position is possible, the sail will swing to it
             self.main = wind_rel_dir
         else:
             # Otherwise, it will swing toward the max position that the wind is pushing it toward
-            self.main = math.copysign(max_sail_pos, main_off_wind)
-        if jib_off_wind * (wind_rel_dir - self.set_jib) > 0 and wind_pos_possible:
+            self.main = math.copysign(self.set_main, main_off_wind)
+        if jib_off_wind * (wind_rel_dir - self.set_jib) > 0 and jib_pos_possible:
             # If wind is pushing sail toward the equilibrium position, and that position is possible, the sail will swing to it
             self.jib = wind_rel_dir
         else:
             # Otherwise, it will swing toward the max position that the wind is pushing it toward
-            self.jib = math.copysign(max_sail_pos, jib_off_wind)
+            self.jib = math.copysign(self.set_jib, jib_off_wind)
 
     # Returns (linear acceleration), (angular acceleration)
     def calc_accelerations(self):
