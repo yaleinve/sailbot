@@ -159,12 +159,12 @@ class Simulator:
         grav_force = Vector(0, 0, 50)
 
         ap_wind_vec = self.ap_wind().neg()  # Direction wind is moving, not coming from
-        main_force = Vector.from_polar(1, self.w.z + self.main).normal().vector_proj(ap_wind_vec).mult(main_constant)
-        jib_force = Vector.from_polar(1, self.w.z + self.jib).normal().vector_proj(ap_wind_vec).mult(jib_constant)
-        keel_force = Vector.from_polar(1, self.w.z).normal().vector_proj(self.v.neg()).mult(keel_constant)
-        axial_drag = Vector.from_polar(1, self.w.z).normal().vector_proj(self.v.neg().comp_mult(self.v.comp_abs())).mult(axial_friction)
+        main_force = Vector.from_polar(1, self.ang.z + self.main).normal().vector_proj(ap_wind_vec).mult(main_constant)
+        jib_force = Vector.from_polar(1, self.ang.z + self.jib).normal().vector_proj(ap_wind_vec).mult(jib_constant)
+        keel_force = Vector.from_polar(1, self.ang.z).normal().vector_proj(self.v.neg()).mult(keel_constant)
+        axial_drag = Vector.from_polar(1, self.ang.z).normal().vector_proj(self.v.neg().comp_mult(self.v.comp_abs())).mult(axial_friction)
         forward_drag = self.v.neg().comp_mult(self.v.comp_abs()).mult(forward_friction)
-        rudder_force = Vector.from_polar(1, self.w.z + self.set_rudder).normal().vector_proj(self.v.neg()).mult(rudder_constant)
+        rudder_force = Vector.from_polar(1, self.ang.z + self.set_rudder).normal().vector_proj(self.v.neg()).mult(rudder_constant)
 
         main_torque = inverse_moment_inertia.comp_mult(main_center.cross(main_force))
         jib_torque = inverse_moment_inertia.comp_mult(jib_center.cross(jib_force))
@@ -173,7 +173,7 @@ class Simulator:
 
         angular_drag_torque = self.w.neg().comp_mult(self.w.comp_abs()).mult(angular_friction)
         mass_center = Vector.null()
-        mass_center.x, mass_center.z = rotate(base_mass_center.x, base_mass_center.z, self.w.y)
+        mass_center.x, mass_center.z = rotate(base_mass_center.x, base_mass_center.z, self.ang.y)
         gravity_torque = inverse_moment_inertia.comp_mult(mass_center.cross(grav_force))
 
         forces = main_force.add(jib_force).add(keel_force).add(rudder_force).add(axial_drag).add(forward_drag)
