@@ -266,6 +266,12 @@ class Vector:
     def normal(self):
         return Vector(-self.y, self.x, 0);
 
+    def __str__(self):
+        return str(self.x) + ', ' + str(self.y) + ', ' + str(self.z)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 # Return angle in -180 to 180 range that is equivalent to input angle
 def angle_180_range(a):
