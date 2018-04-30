@@ -115,17 +115,21 @@ def publish_tactics():
   if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
     if pointOfSail == "Running":                  #Transitions are reveresed for
       if onStbd and xte > xteMax:                 #Beating and Running
+        rospy.loginfo("[tactics] Jibing to starboard");
         targetHeading = port                      #Do we want to signal a jibe????
         lastTack = time.time()
       elif (not onStbd) and xte < xteMin:
+        rospy.loginfo("[tactics] Jibing to port");
         targetHeading = stbd
         lastTack = time.time()
       lastTargetHeading = targetHeading
     elif pointOfSail == "Beating":
       if onStbd and xte < xteMin:
+        rospy.loginfo("[tactics] Tacking to starboard");
         targetHeading = port
         lastTack = time.time()
       elif (not onStbd) and xte > xteMax:
+        rospy.loginfo("[tactics] Tacking to port");
         targetHeading = stbd
         lastTack = time.time()
       lastTargetHeading = targetHeading
