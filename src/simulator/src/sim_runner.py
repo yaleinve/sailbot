@@ -84,7 +84,7 @@ class Simulator:
         msg = AirmarData()
         msg.heading = self.ang.z
         msg.amrRoll = self.ang.y  # This will always be 0, so TODO: Implement roll properly -- not essential, but would be nice
-        msg.apWndSpd, msg.apWndDir = self.ap_wind().to_polar()
+        msg.apWndSpd, msg.apWndDir = self.rel_wind().to_polar()
         msg.sog, msg.cog = self.v.to_polar()
         msg.truWndSpd, msg.truWndDir = self.wind.to_polar()
         # Reasonably hoping that simulation distances never become large enough for spherical geometry to create serious problems
@@ -179,9 +179,16 @@ class Simulator:
         torques = main_torque.add(jib_torque).add(keel_torque).add(rudder_torque).add(gravity_torque).add(angular_drag_torque)
         return forces, torques
 
-    # Get apparent wind vector (not a field, because it would be a pain to relcalculate it whenever velocity is updated)
+    # Get apparent wind vector with compass direction
+    # Unlike in sails_rudder and airmar, direction is not relative to heading
+    # Not a field, because it would be a pain to relcalculate it whenever velocity is updated)
     def ap_wind(self):
         return self.wind.add(self.v)  # Add, rather than subtract, because "wind direction" is the direction wind is coming from
+
+    # Apparent wind relative to heading, as used in airmar and sails_rudder
+    def rel_wind(self):
+        ap = self.ap_wind()
+        return Vector.from_polar(ap.mag(), ap.xy_angle() - self.ang.z)
 
     # Calculates position of part in global referenc frame when both base and part are rotated
     @staticmethod
