@@ -30,6 +30,7 @@ def initGlobals():
   global vmgUp
   global pointOfSail
   global lastTack
+  global lastTargetHeading
   global truWndDir
   global legEndLat
   global legEndLong
@@ -50,7 +51,8 @@ def initGlobals():
   vmg = 0.0
   vmgUp = 0.0
   pointOfSail = ""
-  lastTack = time.time()
+  lastTack = 0.0
+  lastTargetHeading = 0.0
   truWndDir = 0.0
   currentLat = 0.0
   currentLong= 0.0
@@ -62,6 +64,7 @@ def initGlobals():
 #Publish tactics output message, target_heading.  This function contains the actual algorithm.
 def publish_tactics():
   global lastTack  #The only global we'll write to
+  global lastTargetHeading
 
   #Constants for Racht. MUST BE EMPIRICALLY DETERMINED
   pointing_angle = 50.0   #Can't point closer than 50 degrees to wind
@@ -117,6 +120,7 @@ def publish_tactics():
       elif (not onStbd) and xte < xteMin:
         targetHeading = stbd
         lastTack = time.time()
+      lastTargetHeading = targetHeading
     elif pointOfSail == "Beating":
       if onStbd and xte < xteMin:
         targetHeading = port
@@ -124,6 +128,9 @@ def publish_tactics():
       elif (not onStbd) and xte > xteMax:
         targetHeading = stbd
         lastTack = time.time()
+      lastTargetHeading = targetHeading
+  else:
+    targetHeading = lastTargetHeading
 
   msg = NavTargets()  #Instantiate a message
   msg.pointOfSail = pointOfSail  #From globals
