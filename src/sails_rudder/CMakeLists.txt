@@ -47,6 +47,7 @@ find_package(catkin REQUIRED
  add_message_files(
    FILES
    SailsRudderPos.msg
+   SailsRudderStatus.msg
    )
 
 ## Generate services in the 'srv' folder
