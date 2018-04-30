@@ -128,15 +128,15 @@ class Simulator:
         main_mast = Vector(0, -1, 9)
         main_rel_center = Vector(0, 5, 0)  # Relative to mast
         # Add 180 to sail position to adjust to angle convention
-        main_center = Simulator.calc_part_pos(main_mast, main_rel_center, self.ang.z, 180 + self.main)
+        main_center = Simulator.calc_part_pos(main_mast, main_rel_center, self.ang.z + 90, self.main)
 
         jib_mast = Vector(0, -7, 5)  # Jib doesn't actually have a mast, but it acts like it has one here
         jib_rel_center = Vector(0, 5, 0)
-        jib_center = Simulator.calc_part_pos(jib_mast, jib_rel_center, self.ang.z, 180 + self.jib)
+        jib_center = Simulator.calc_part_pos(jib_mast, jib_rel_center, self.ang.z + 90, self.jib)
 
         rudder_base = Vector(0, 6.5, 0)
         rudder_rel_center = Vector(0, 1, 0)
-        rudder_center = Simulator.calc_part_pos(rudder_base, rudder_rel_center, self.ang.z, 180 + self.set_rudder)
+        rudder_center = Simulator.calc_part_pos(rudder_base, rudder_rel_center, self.ang.z + 90, self.set_rudder)
 
         keel_center = Vector(0, 0, -5)
         base_mass_center = Vector(0, 0, -1)
