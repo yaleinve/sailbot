@@ -132,7 +132,7 @@ class SailsRudder():
         self.trueWindDirection = data.truWndDir
         self.velocityDirection = data.cog # course over ground
         self.boatHeading = data.heading
-        self.updatePositions()
+        # self.updatePositions()
 
     def updatePositions(self):
 
