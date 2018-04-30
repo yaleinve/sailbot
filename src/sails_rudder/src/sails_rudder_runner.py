@@ -71,11 +71,13 @@ class SailsRudder():
         self.reqedJib = 90.0 #Init is fully eased sails (avoids mechanical breakage?)
         self.reqedRudder = 0.0
 
+        # Whether we are on the first cycle, and should publish positions no matter what
+        self.firstCycle = True
+
         # Previously calculated, but not necessarily requested positions
-        # Unreasonable numbers to force publishing on first cycle
-        self.mainPos = -9999.9
-        self.jibPos = -9999.9
-        self.rudderPos = -9999.9
+        self.mainPos = 90.0
+        self.jibPos = 90.0
+        self.rudderPos = 0.0
 
         #CONSTANTS
         self.mainTolerance = 5.0 #The differences at which point we republish
@@ -297,10 +299,12 @@ class SailsRudder():
         #Is it a big enough change that we should republish?  This reduces servo jitters
         if (abs(self.mainPos - self.reqedMain) > self.mainTolerance or
             abs(self.jibPos - self.reqedJib) > self.jibTolerance or
-            abs(self.rudderPos - self.reqedRudder) > self.rudderTolerance):
+            abs(self.rudderPos - self.reqedRudder) > self.rudderTolerance or
+            self.firstCycle):
           self.reqedMain = self.mainPos
           self.reqedJib = self.jibPos
           self.reqedRudder = self.rudderPos
+          self.firstCycle = False
           self.publish_positions() #Actually publish the request
 
     def listener(self):
