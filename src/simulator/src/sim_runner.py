@@ -4,7 +4,7 @@
 # Adapated from SailsRudder simulator (written in Go) at https://github.com/acshi/acshi/tree/master/sailing
 
 import rospy
-import math
+import math, signal, pdb
 
 import gpsCalc
 from sails_rudder.msg import SailsRudderPos
@@ -17,7 +17,7 @@ class Simulator:
         # reference angle north, as used elsewher in this project.
 
         self.dt = 0.01  # Physics timestep
-        self.feedback_interval = 0.1  # Airmar feedback publication interval
+        self.feedback_interval = .2  # Airmar feedback publication interval
 
         self.pub = None  # Publisher will be created in self.simulate
 
@@ -26,7 +26,7 @@ class Simulator:
 
         # Boat properties in SI units
         self.pos = Vector.null()
-        self.ang = Vector.null()  # Angular position
+        self.ang = Vector(0, 0, 180)  # Angular position
         self.v = Vector.null()
         self.w = Vector.null()  # Angular velocity
 
@@ -47,7 +47,8 @@ class Simulator:
 
         sim_rate = rospy.Rate(1 / self.dt)  # Hz
         step_num = 0
-        while not rospy.is_shutdown():
+        # while not rospy.is_shutdown():
+        while True:
             self.physics_step()
             if step_num % int(self.feedback_interval / self.dt) == 0:
                 self.publish_feedback()
@@ -56,7 +57,7 @@ class Simulator:
 
     def sails_rudder_callback(self, msg):
         # TODO: Add something to account for time to move servos
-        rospy.loginfo("[simulator] Received sails_rudder message " + str(msg))
+        # rospy.loginfo("[simulator] Received sails_rudder message " + str(msg))
         self.set_main = msg.mainPos + self.sail_adjust
         self.set_jib = msg.jibPos + self.sail_adjust
         self.set_rudder = msg.rudderPos + self.sail_adjust
@@ -153,7 +154,7 @@ class Simulator:
 
         # Friction constants (dimensionless)
         axial_friction = 0.05
-        angular_friction = 3.0
+        angular_friction = 0.1
         forward_friction = 0.5
 
         grav_force = Vector(0, 0, 50)
@@ -291,7 +292,10 @@ def rotate(x, y, a):
     ar = math.radians(a)
     return (x * math.cos(ar) - y * math.sin(ar)), (x * math.sin(ar) + y * math.cos(ar))
 
+def debug_signal_handler(signal, frame):
+    pdb.set_trace()
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, debug_signal_handler)
     sim = Simulator()
     sim.simulate()
