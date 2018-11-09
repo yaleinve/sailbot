@@ -15,7 +15,7 @@ def handle_set_relays_auto(auto):
 
 
 def handle_get_auto_pin(req):
-    return autonomousPin.read() > auxDivide
+    return not (backAutoDivide <= autonomousPin.read() <= auxDivide)
 
 
 if __name__ == "__main__":
@@ -24,7 +24,8 @@ if __name__ == "__main__":
 
         # Autonomous pins from RC
         autonomousPin = mraa.Aio(1)  # The analog pin number for aux 1
-        auxDivide = 50  # A good dividing line (in 1024 bit adc units) to determine between high and low switch)
+        auxDivide = 60  # A good dividing line (in 1024 bit adc units) to determine between high and low switch)
+        backAutoDivide = 20
 
         # Relay pins
         sailRelayPin = mraa.Gpio(4)  # Pin 4 is sail relays
@@ -34,6 +35,7 @@ if __name__ == "__main__":
 
         s1 = rospy.Service('set_relays_auto', SetRelaysAuto, handle_set_relays_auto)
         s2 = rospy.Service('get_auto_pin', GetAutoPin, handle_get_auto_pin)
+        rospy.loginfo("[captin_hardware_helper] Started")
         rospy.spin()
 
     except KeyboardInterrupt:
