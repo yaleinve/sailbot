@@ -2,9 +2,7 @@
 # tactics.py              Eric Anderson Mar 2015
 
 #Import statements
-import roslib
 import rospy
-import sys
 import time
 from compassCalc import *
 from gpsCalc import *
@@ -12,6 +10,7 @@ from gpsCalc import *
 #Import the signatures/headers for the message types we have created
 from tactics.msg import NavTargets
 from airmar.msg import AirmarData
+from speed_calculator.msg import SpeedStats
 from captain.msg import LegInfo
 
 pub_tactics = rospy.Publisher("/nav_targets", NavTargets, queue_size = 10)
@@ -31,6 +30,7 @@ def initGlobals():
   global vmgUp
   global pointOfSail
   global lastTack
+  global lastTargetHeading
   global truWndDir
   global legEndLat
   global legEndLong
@@ -51,7 +51,8 @@ def initGlobals():
   vmg = 0.0
   vmgUp = 0.0
   pointOfSail = ""
-  lastTack = time.time()
+  lastTack = 0.0
+  lastTargetHeading = 0.0
   truWndDir = 0.0
   currentLat = 0.0
   currentLong= 0.0
@@ -63,6 +64,7 @@ def initGlobals():
 #Publish tactics output message, target_heading.  This function contains the actual algorithm.
 def publish_tactics():
   global lastTack  #The only global we'll write to
+  global lastTargetHeading
 
   #Constants for Racht. MUST BE EMPIRICALLY DETERMINED
   pointing_angle = 50.0   #Can't point closer than 50 degrees to wind
@@ -113,18 +115,26 @@ def publish_tactics():
   if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
     if pointOfSail == "Running":                  #Transitions are reveresed for
       if onStbd and xte > xteMax:                 #Beating and Running
+        rospy.loginfo("[tactics] Jibing to starboard");
         targetHeading = port                      #Do we want to signal a jibe????
         lastTack = time.time()
       elif (not onStbd) and xte < xteMin:
+        rospy.loginfo("[tactics] Jibing to port");
         targetHeading = stbd
         lastTack = time.time()
+      lastTargetHeading = targetHeading
     elif pointOfSail == "Beating":
       if onStbd and xte < xteMin:
+        rospy.loginfo("[tactics] Tacking to starboard");
         targetHeading = port
         lastTack = time.time()
       elif (not onStbd) and xte > xteMax:
+        rospy.loginfo("[tactics] Tacking to port");
         targetHeading = stbd
         lastTack = time.time()
+      lastTargetHeading = targetHeading
+  else:
+    targetHeading = lastTargetHeading
 
   msg = NavTargets()  #Instantiate a message
   msg.pointOfSail = pointOfSail  #From globals
@@ -139,9 +149,6 @@ def airmar_callback(data):
   global heading
   global apWndSpd
   global apWndDir
-  global xte
-  global vmg
-  global vmgUp
   global cog
   global sog
   global truWndDir
@@ -149,24 +156,36 @@ def airmar_callback(data):
   global currentLong
   global target_course
   global target_range
+  global legEndLat
+  global legEndLong
 
   heading  = data.heading
   apWndSpd = data.apWndSpd
   apWndDir = data.apWndDir
-  xte = data.XTE
-  vmg = data.VMG
-  vmgUp = data.VMGup
   cog = data.cog
   sog = data.sog
   truWndDir = data.truWndDir
   currentLat = data.lat
   currentLong = data.long
 
-  #This is all that the old navigator node did:
+  # This is all that the old navigator node did:
   target_course = gpsBearing(currentLat, currentLong, legEndLat, legEndLong)
   target_range =  gpsDistance(currentLat, currentLong, legEndLat, legEndLong)
 
-  publish_tactics()  #We publish every time the airmar updates
+  # No need to publish here, because speed_stats_callback will be called very soon
+
+
+def speed_stats_callback(data):
+  global xte
+  global vmg
+  global vmgUp
+
+  xte = data.xte
+  vmg = data.vmg
+  vmgUp = data.vmgup
+
+  publish_tactics()  # We publish every time the airmar updates
+
 
 #Only need a few things from leg_info
 def leg_info_callback(data):
@@ -185,6 +204,7 @@ def listener():
 
   rospy.init_node("tactics")  #Must init node to subscribe
   rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
+  rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
   rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
   rospy.loginfo("[tactics] All subscribed, tactics has started!")
 
