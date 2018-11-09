@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
         s1 = rospy.Service('set_relays_auto', SetRelaysAuto, handle_set_relays_auto)
         s2 = rospy.Service('get_auto_pin', GetAutoPin, handle_get_auto_pin)
+        rospy.loginfo("[captin_hardware_helper] Started")
         rospy.spin()
 
     except KeyboardInterrupt:
