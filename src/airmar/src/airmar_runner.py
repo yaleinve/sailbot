@@ -104,8 +104,8 @@ class Airmar:
     airmar_data_msg.amrRoll = self.amrRoll
     airmar_data_msg.apWndDir = self.apWndDir
     airmar_data_msg.apWndSpd = self.apWndSpd
-    airmar_data_msg.cog = self.heading  #self.cog    #For debugging purposes
-    airmar_data_msg.sog = 2.0  #self.sog    #For debugging purposes
+    airmar_data_msg.cog = self.cog    #For debugging purposes
+    airmar_data_msg.sog = self.sog    #For debugging purposes
     airmar_data_msg.truWndSpd = self.truWndSpd
     airmar_data_msg.truWndDir = self.truWndDir
     airmar_data_msg.lat = self.lat

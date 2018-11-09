@@ -1,7 +1,7 @@
 <launch>
-    <node pkg="captain" type="captain_runner.py" name="captain" />
-    <node pkg="airmar" type="airmar_runner.py" name="airmar" />
-    <node pkg="servo_control" type="servoControl.py" name="servo_control" />
-    <node pkg="sails_rudder" type="sails_rudder_runner.py" name="sails_rudder" />
-    <node pkg="tactics" type="tactics_runner.py" name="tactics" />
+    <node pkg="captain" type="captain_runner.py" name="captain" output="screen" />
+    <node pkg="airmar" type="airmar_runner.py" name="airmar" output="screen" />
+    <node pkg="servo_control" type="servoControl.py" name="servo_control" output="screen" />
+    <node pkg="sails_rudder" type="sails_rudder_runner.py" name="sails_rudder" output="screen" />
+    <node pkg="tactics" type="tactics_runner.py" name="tactics" output="screen" />
 </launch>

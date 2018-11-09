@@ -41,10 +41,13 @@ class Captain():
         self.truWndDir = 0.0
         self.currentHeading = 0.0
 
+	rospy.loginfo("TESTINGABC")
+	print("TESTING TESTING JARED +=====")
+
         #Autonomous pins from RC
         self.autonomousPin = mraa.Aio(1)  #The analog pin number for aux 1
-        self.auxDivide = 50               #A good dividing line (in 1024 bit adc units) to determine between high and low switch)
-        self.backAutoDivide = 10          # If autnoumous pin value is this low, controller is off, so use autonomous
+        self.auxDivide = 60               #A good dividing line (in 1024 bit adc units) to determine between high and low switch)
+        self.backAutoDivide = 20          # If autnoumous pin value is this low, controller is off, so use autonomous
         self.currentlyAutonomous = False  #Default into manual on boot (so if in manual during startup we don't lose control)
 
         #Relay pins
@@ -318,7 +321,7 @@ class Captain():
         self.currentLat = data.lat
         self.currentLong = data.long
         self.currentHeading = data.heading
-        rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
+        #rospy.loginfo("airmar callback- lat: " + str(self.currentLat) +", long: "  + str(self.currentLong))
 
     #Every time new competition info comes in, we must re-route everything
     def competition_info_callback(self,data):
