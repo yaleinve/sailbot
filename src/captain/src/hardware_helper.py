@@ -16,7 +16,7 @@ def handle_set_relays_auto(auto):
 
 def handle_get_auto_pin(req):
     rospy.loginfo(str(autonomousPin.read()))
-    return not (40 <= autonomousPin.read() <= 75)
+    return not (backAutoDivide <= autonomousPin.read() <= auxDivide)
 
 
 if __name__ == "__main__":
