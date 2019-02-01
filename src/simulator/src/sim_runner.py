@@ -10,7 +10,36 @@ import gpsCalc
 from sails_rudder.msg import SailsRudderPos
 from airmar.msg import AirmarData
 
+import numpy as np
 
+wa=0
+wv=10
+wd1,wd2=0,0
+
+W_A=30
+W_A_SIG=1.5
+W_DA_V=0
+W_D1=20
+W_D2=20
+W_R1=100
+W_R2=5
+W_DSIG1=1.0/W_R1
+W_DSIG2=1.0/W_R2
+
+def getFirstWind():
+	global wa,wv,wd1,wd2
+	wa=0
+	wv=10
+	wd1,wd2=0,0
+	return Vector.from_polar(wv,wa)
+
+def getNextWind():
+	global wa,wv,wd1,wd2,W_A,W_DA_V
+	wd1+=np.random.normal(loc=-wd1/W_R1,scale=W_DSIG1)
+	wd2+=np.random.normal(loc=-wd2/W_R2,scale=W_DSIG2)
+	W_A+=np.random.normal(scale=W_A_SIG)
+	return (W_A+W_D1*wd1+W_D2*wd2+np.random.normal(loc=0,scale=12))%360
+	
 class Simulator:
     def __init__(self):
         # Coordinate convention: x-axis is NORTH, y-axis is EAST. This makes clockwise rotations positive, with
@@ -21,7 +50,7 @@ class Simulator:
 
         self.pub = None  # Publisher will be created in self.simulate
 
-        self.wind = Vector.from_polar(10, 0)
+        self.wind = getNextWind()
         self.sail_adjust = 5  # Degrees to add to sail positions to account for slack
 
         # Boat properties in SI units
@@ -63,6 +92,7 @@ class Simulator:
         self.set_rudder = msg.rudderPos + self.sail_adjust
 
     def physics_step(self):
+    	self.wind=getNextWind()
         # Numerical integration procedure based on https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
         self.update_sails()
         # These are called force and torque in calc_accelerations, so I'm not
