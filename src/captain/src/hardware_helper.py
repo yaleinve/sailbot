@@ -9,12 +9,13 @@ from captain.srv import *
 
 
 def handle_set_relays_auto(auto):
-    sailRelayPin.write(int(auto))
-    rudderRelayPin.write(int(auto))
+    sailRelayPin.write(int(auto.auto))
+    rudderRelayPin.write(int(auto.auto))
     return SetRelaysAutoResponse()
 
 
 def handle_get_auto_pin(req):
+    rospy.loginfo(str(autonomousPin.read()))
     return not (backAutoDivide <= autonomousPin.read() <= auxDivide)
 
 

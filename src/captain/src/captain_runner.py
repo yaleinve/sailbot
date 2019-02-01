@@ -73,7 +73,7 @@ class Captain():
 
 
         #CONSTANTS
-        self.legArrivalTol = 1.0       #How close do we have to  get to waypoint to have "arrived." 1.0m for now
+        self.legArrivalTol = 5.0       #How close do we have to  get to waypoint to have "arrived." 1.0m for now
         self.cautious = False
         self.cautiousDistance = 30.0   #How far away from waypoint to we start being cautious
 
@@ -100,9 +100,12 @@ class Captain():
     #Do some checks and pull the next waypoint out of the queue
     def getNextWaypoint(self):
         if self.legQueue.empty():  #If no next waypoint
-            rospy.loginfo("[captain] No more waypoints in queue, journey complete!!!")
-            self.compMode = "Wait" #Go into wait mode, exit
-            self.loadLegQueue()
+            rospy.loginfo("[captain] Using default waypoint")
+            self.beginLat = self.currentLat       #From where we currently are
+            self.beginLong = self.currentLong
+            self.current_target_waypoint = Waypoint(41.255989,-72.850459,self.xteMin,self.xteMax)
+            self.publish_captain()
+            rospy.loginfo("[captain] Just  published  leg info!")
         else:                      #Move on to next leg, pull waypoint, start leg
             rospy.loginfo("[captain] Popping Waypoint from Queue")
             self.beginLat = self.currentLat       #From where we currently are
