@@ -38,43 +38,53 @@ def initGlobals():
 
 
 #actual algoritham, in rads
+
+from random import shuffle
 def get_smoothed_data(apVecs,truVecs,apRe,truRe):
 	def mean_of_circular_quantities(v):
-		return atan2(1/len(v)*sum(sin(x) for x in v),1/len(v)*sum(cos(x) for x in v))
+		return atan2(1.0/len(v)*sum(sin(x) for x in v),1.0/len(v)*sum(cos(x) for x in v))%(2*pi)
 	def distAngAbs(a,b):
 		return min(abs((a-b)%(2*pi)),abs((b-a)%(2*pi)))
-	def bin_smoothed(v,offsize):
-		vSorted=sorted(v[:],key =lambda x:x[0])
-		pairs=[]
-		e=0
-		s=0
-		n=len(vSorted)
-		while(distAngAbs(vSorted[s][0],vSorted[0][0])<offsize):
-			s-=1
-			if(s==-n):
-				break
-		while(distAngAbs(vSorted[e][0],vSorted[0][0])<offsize and e<s+n):
-			e+=1
-		pairs.append((vSorted[0],e-s))
-		for i in range(1,n):
-			while(not distAngAbs(vSorted[s][0],vSorted[i][0])<offsize):
-				s+=1
-			while(distAngAbs(vSorted[e][0],vSorted[i][0])<offsize and e<s+n):
-				e+=1
-			pairs.append((vSorted[0],e-s))
-		pairs.sort(key=lambda x:x[1])
-		return pairs[0][0]
+	# def bin_smoothed(v):
+	# 	if(len(v)==0):
+	# 		return (0,.0001)#so doesnt cause any errors
+	# 	vSorted=sorted(v[:],key =lambda x:x[0])
+	# 	pairs=[]
+	# 	e=0
+	# 	s=0
+	# 	n=len(vSorted)
+	# 	while(distAngAbs(vSorted[s][0],vSorted[0][0])<offsize):
+	# 		s-=1
+	# 		if(s==-n):
+	# 			break
+	# 	while(distAngAbs(vSorted[e][0],vSorted[0][0])<offsize and e<s+n):
+	# 		e+=1
+	# 	pairs.append((vSorted[0],e-s))
+	# 	for i in range(1,n):
+	# 		while(not distAngAbs(vSorted[s][0],vSorted[i][0])<offsize):
+	# 			s+=1
+	# 		while(distAngAbs(vSorted[e%n][0],vSorted[i][0])<offsize and e<s+n):
+	# 			e+=1
+	# 		pairs.append((vSorted[i],e-s))
+	# 	shuffle(pairs)
+	# 	pairs.sort(key=lambda x:x[1])
+	# 	return pairs[0][0]
 	def mean_smoothed(vs):
 		a=mean_of_circular_quantities([v[0] for v in vs])
-		s=1/len(vs)*sum(v[1]*cos(v[1]-a) for v in vs)
+		s=1.0/len(vs)*sum(v[1] for v in vs)
+	# print "APTRURE",apRe,ls
 		return a,s
-	apRe.append(bin_smoothed(apVecs))
+	if(len(apVecs)==0):
+		return (0,.001),(0,.001)
+	apRe.append(mean_smoothed(apVecs))
 	if(len(apRe)>n_smooth):
-		apRe=apRe[1:]
-	truRe.append(bin_smoothed(truVecs))
+		apRe.pop(0)
+	truRe.append(mean_smoothed(truVecs))
 	if(len(truRe)>n_smooth):
-		truRe=truRe[1:]
+		truRe.pop(0)
+	#apRe[-1],truRe[-1]#
 	return mean_smoothed(apRe),mean_smoothed(truRe)
+
 		
 
 def publish_smoothed():
