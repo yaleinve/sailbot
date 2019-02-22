@@ -75,7 +75,7 @@ def publish_tactics():
 
   #ACTUAL ALGORITHM:
 
-  diff = compass_diff(target_course,truWndDir)  #From where we want to go to the wind
+  diff = compass_diff(target_course, truWndDir)  #From where we want to go to the wind
   #rospy.loginfo("diff is : " + str(diff))                                                            # (remember wind vector orientation)
 
   #Reaching Mode is default
@@ -110,7 +110,6 @@ def publish_tactics():
   #I think this algorithm might have lots of weird edge cases:
   #What if on a reach but slide below course to the point you have to beat?
   #What if you sail past your destination on a beat and start running?
-
   #Implement Tacking
   if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
     if pointOfSail == "Running":                  #Transitions are reveresed for
@@ -138,6 +137,7 @@ def publish_tactics():
 
   msg = NavTargets()  #Instantiate a message
   msg.pointOfSail = pointOfSail  #From globals
+  
   msg.targetHeading = targetHeading
   msg.targetCourse = target_course
   msg.targetRange = target_range
