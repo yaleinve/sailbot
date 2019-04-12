@@ -38,7 +38,7 @@ def getNextWind():
 	wd1+=np.random.normal(loc=-wd1/W_R1,scale=W_DSIG1)
 	wd2+=np.random.normal(loc=-wd2/W_R2,scale=W_DSIG2)
 	W_A+=np.random.normal(scale=W_A_SIG)
-	return (W_A+W_D1*wd1+W_D2*wd2+np.random.normal(loc=0,scale=12))%360
+	return Vector.from_polar(wv, (W_A+W_D1*wd1+W_D2*wd2+np.random.normal(loc=0,scale=12))%360)
 	
 class Simulator:
     def __init__(self):
