@@ -1,0 +1,9 @@
+<launch>
+    <node pkg="rosbridge_server" type="rosbridge_websocket" name="rosbridge_websocket" output="screen" />
+    <node pkg="captain" type="sim_helper.py" name="sim_helper" output="screen" />
+    <node pkg="captain" type="captain_runner.py" name="captain" output="screen" />
+    <node pkg="tactics" type="tactics_runner.py" name="tactics" output="screen" />
+    <node pkg="sails_rudder" type="sails_rudder_runner.py" name="sails_rudder" output="screen" />
+    <node pkg="speed_calculator" type="speed_calculator_runner.py" name="speed_calculator" output="screen" />
+    <node pkg="simulator" type="sim_runner.py" name="simulator" output="screen" />
+</launch>
