@@ -9,6 +9,7 @@ import rospy
 import sys
 import Queue
 import math
+from enum import Enum
 
 from compassCalc import *
 from gpsCalc import *    #import all the gps functions
@@ -30,6 +31,22 @@ class Waypoint():
         rospy.loginfo('    lat: ' + str(self.wlat)+ ', long: ' + str(self.wlong))
         rospy.loginfo('    xtemin: ' + str(self.xteMin) + ', xteMax: ' + str(self.xteMax))
 
+class Mode(Enum):
+    # Debugging
+    WAIT = "Wait"
+    SAIL_TO_POINT = "SailToPoint"
+    MAINTAIN_HEADING = "MaintainHeading"
+    MAINTAIN_POINT_OF_SAIL = "MaintainPointOfSail"
+
+    # Competition
+    ROUND_AND_RETURN = "RoundAndReturn"
+    STATION_KEEPING = "StationKeeping"
+
+    # New Competition
+    ENDURANCE = "Endurance"
+    PRECISION_NAVIGATION = "PrecisionNavigation"
+    COLLISION_AVOIDANCE = "CollisionAvoidance"
+    SEARCH = "Search"
 
 class Captain():
     #Internal State
@@ -53,15 +70,7 @@ class Captain():
         self.pub_autonomous = rospy.Publisher("/autonomous_status", AutonomousStatus, queue_size = 10)
 
         #Default into wait mode
-        self.compMode = "Wait"     # From competition_info
-                                   # POSSIBLE VAULES:
-                                   # - Wait
-                                   # - SailToPoint
-                                   # - MaintainHeading
-                                   # - MaintainPointOfSail
-                                   # - RoundAndReturn
-                                   # - StationKeeping
-
+        self.compMode = Mode.WAIT
 
         self.legQueue = Queue.Queue(maxsize=0)  #A queue of waypoints, no max size
         self.beginLat = 0.0
@@ -131,14 +140,14 @@ class Captain():
         #============================#
 
         #Skip everything for wait   #TODO: change this?
-        if self.compMode == "Wait":
+        if self.compMode == Mode.WAIT:
             return
 
-        if self.compMode == "StationKeeping":
+        if self.compMode == Mode.STATION_KEEPING:
             #Time to exit the box?
             if self.taskBeginTime > 0.0 and rospy.get_time() - self.taskBeginTime >= stationKeepingTaskDuration:
                 #TODO: improve this really crappy "sail out of the box by going straight" algorithm
-                self.compMode = "MaintainHeading"
+                self.compMode = Mode.MAINTAIN_HEADING
                 self.angle = self.currentHeading
                 self.loadLegQueue()
                 return                     #Return here, simplifies control flow (no deep recursion with nearby waypoints), just let main loop run again
@@ -164,7 +173,7 @@ class Captain():
 
 
 
-    #Loads the leg Queue with appropriate legs given competition_info messages
+    # Loads the leg Queue with appropriate legs given competition_info messages
     # TASK ALGORITHMS GO IN HERE!!!!!
     def loadLegQueue(self):
         self.legQueue = Queue.Queue(maxsize=0)  #Empty the queue
@@ -175,20 +184,20 @@ class Captain():
         #==================================#
 
         #Wait mode
-        if self.compMode == "Wait":                 #Stay in the same place so we can get there
+        if self.compMode == Mode.WAIT:                 #Stay in the same place so we can get there
         # TODO: Wait mode should tell the navigator to quit its latest goal,
         # and possibly let out the sheets / turn the rudder so we move as
         # little as possible
             pass
 
         #Sail to a given GPS Point
-        elif self.compMode == "SailToPoint":          #Sail to a gps target
+        elif self.compMode == Mode.SAIL_TO_POINT:          #Sail to a gps target
             #rospy.loginfo("[captain] I'm in SailToPoint!")
             self.legQueue.put(Waypoint(self.gpsLat1,self.gpsLong1,self.xteMin,self.xteMax)) #Insert a gps loc
             #self.legQueue.put(Waypoint(0,0,-43,43))
 
         #Sail a compass course
-        elif self.compMode == "MaintainHeading":      #Sail a constant compass direction forever
+        elif self.compMode == Mode.MAINTAIN_HEADING:      #Sail a constant compass direction forever
             #rospy.loginfo('[captain] entered maintain heading')
             #rospy.loginfo('[captain] angle is ' + str(self.angle))
             loc = gpsVectorOffset(self.currentLat,self.currentLong,self.angle,50000)
@@ -196,7 +205,7 @@ class Captain():
             self.legQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 50km in direction of angle
 
         #Sail relative to the wind    TODO: Should we update this if the wind changes?
-        elif self.compMode == "MaintainPointOfSail":        #Sail a constant angle to the wind forever
+        elif self.compMode == Mode.MAINTAIN_POINT_OF_SAIL:        #Sail a constant angle to the wind forever
             course = (self.truWndDir + self.angle) %360.0   #The course relative to the wind
             loc = gpsVectorOffset(self.currentLat,self.currentLong,course,50000)
             self.leqQueue.put(Waypoint(loc[0],loc[1],self.xteMin,self.xteMax)) #Sail 50km in direction of angle
@@ -248,7 +257,7 @@ class Captain():
         #Input: lat/long of box corners in following order: nw, sw, se, ne (relative to wind)
         #Alg sketch: sail a narrow corridor to the middle of the box laterally, 2/3 upwind
 
-        elif self.compMode == "StationKeeping":       #Stay within box created by 4 gps points
+        elif self.compMode == Mode.STATION_KEEPING:       #Stay within box created by 4 gps points
             #Bearing west to east in box
             wToEBrng = (gpsBearing(self.gpsLat1, self.gpsLong1,self.gpsLat4,self.gpsLong4) +  gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat3,self.gpsLong3))/2.0
             sToNBrng = (gpsBearing(self.gpsLat2, self.gpsLong2,self.gpsLat1,self.gpsLong1) +  gpsBearing(self.gpsLat3, self.gpsLong3,self.gpsLat4,self.gpsLong4))/2.0
@@ -273,7 +282,8 @@ class Captain():
         #####  ILLEGAL INPUT  ###################
 
         else:
-            self.compMode = "Wait"        #If invalid input, do nothing
+            rospy.loginfo('[captain] illegal input switching to wait')
+            self.compMode = Mode.WAIT        #If invalid input, do nothing
 
        #Let's kick things off!
         self.checkLeg()
@@ -303,7 +313,7 @@ class Captain():
                 self.publish_autonomous()
 
                 #For station keeping, we'll start the five minute timer when we go into autonomous mode
-                if self.compMode == 'StationKeeping':
+                if self.compMode == Mode.STATION_KEEPING:
                     self.taskBeginTime = rospy.get_time()
                     rospy.loginfo('[captain] StationKeeping start time recorded as : ' + str(self.taskBeginTime))
 
@@ -353,7 +363,7 @@ class Captain():
             self.checkLeg()  # Checks to see if we've arrived at our target yet
             self.checkAutonomous()  #Because this is called immediately after checkLeg, publishing invariant is maintained
             # Note that self.cautious is set by checkLeg()!
-            if self.cautious or self.compMode == "MaintainPointOfSail" or self.compMode == "MaintainHeading":
+            if self.cautious or self.compMode == Mode.MAINTAIN_POINT_OF_SAIL or self.compMode == Mode.MAINTAIN_HEADING:
                 cautious_checkleg_rate.sleep()
             else:
                 normal_checkleg_rate.sleep()
