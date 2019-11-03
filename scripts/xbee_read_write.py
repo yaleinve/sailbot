@@ -2,19 +2,58 @@
 
 import sys
 import time
+import threading
 import mraa
 
 POLL_PERIOD = 0.5
 DEBUG = False
+PARTNER_ADDR = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
 
 def main():
-    s = mraa.Spi(0)
+    spi = mraa.Spi(0)
     # Setting the freqency is necessary to get meaningful values, but it's unclear what the
     # default frequency is and why it doesn't work.
-    s.frequency(1000000)
+    spi.frequency(1000000)
+
+    read_lock = threading.Lock()
+
+    poll_thread = threading.Thread(target=poll, args=(spi, read_lock))
+    poll_thread.daemon = True
+    poll_thread.run()
+
     while True:
-        finish_read(s, bytearray())
+        to_send = raw_input("Type a message:")
+
+        read_lock.acquire()
+
+        read_buf = send_message(spi, to_send)
+        finish_read(spi, read_buf)
+
+        read_lock.release()
+
+
+def poll(spi, read_lock):
+    while True:
+        read_lock.acquire()
+        finish_read(spi, bytearray())
+        read_lock.release()
+
         time.sleep(POLL_PERIOD);
+
+
+def send_message(spi, msg):
+    transmit_header = bytearray([0x10, 0x00]) + bytearray(PARTNER_ADDR) + bytearray([0xFF, 0xFE, 0x00, 0x00])  # See XBee User Guide p. 242
+
+    transmit_contents = transmit_header + bytearray(msg)
+    checksum = calc_checksum(transmit_contents)
+
+    length = len(transmit_contents) + 1
+    general_header = bytearray([0x7E, length >> 8, length & 0xFF])
+
+    bytes_to_transmit = general_header + transmit_contnts + checksum
+    return spi.write(bytes_to_transmit)
+
 
 def finish_read(spi, buf):
     start_loc = buf.find(0x7E)  # Start delimiter, see XBee User Guide for full format.
@@ -33,9 +72,12 @@ def finish_read(spi, buf):
         assert header[2] == 0x90, "Message type not receive: %02x" % header[2]
 
         contents, buf = buffered_read(spi, buf, length - 1)
-        checksum, buf = buffered_read(spi, buf, 1)  # TODO: verify checksum
+        checksum, buf = buffered_read(spi, buf, 1)[0]
+        expected_checksum = calc_checksum(contents)
+        assert checksum == expected_checksum, "Incorrect checksum: received %02x, calculated %02x" % (checksum, expected_checksum)
 
         print "Received: %s" % contents[11:]  # Message text starts at 11th byte
+
 
 def buffered_read(spi, buf, count):
     if count <= len(buf):
@@ -46,9 +88,16 @@ def buffered_read(spi, buf, count):
     else:
         return spi.write(bytearray([0] * count)), bytearray()
 
+
+def calc_checksum(contents):
+    sum_ = sum(contents)
+    return 0xFF - (sum_ & 0xFF)
+
+
 def debug_print(string):
     if DEBUG:
         print string
+
 
 if __name__ == "__main__":
     main()
