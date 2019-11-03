@@ -51,13 +51,6 @@ def publish_tactics():
     if leg is None or airmar is None or speed_stats is None:
         return
 
-    # Constants for Racht. MUST BE EMPIRICALLY DETERMINED
-    pointing_angle = 50.0   # Can't point closer than 50 degrees to wind
-    running_angle = 165.0   # Don't want to sail deeper than this
-    delayBetweenTacks = 10.0    # Don't tack if tacked within the last x seconds
-    # talk to eric what would be reasonable for this delay.
-    # Be careful that this doesn't accidentally sail you out of box for station keeping!!
-
     #ACTUAL ALGORITHM:
 
     diff = compass_diff(target_course, airmar.truWndDir)  #From where we want to go to the wind
@@ -71,20 +64,20 @@ def publish_tactics():
     port = 0.0
 
     #Beating Mode
-    if abs(diff) < pointing_angle:
+    if abs(diff) < UPWIND_THRESHOLD:
         pointOfSail = "Beating"
-        stbd = (airmar.truWndDir - pointing_angle)  % 360   #Define airmar.headings of both tacks
-        port = (airmar.truWndDir + pointing_angle)  % 360
+        stbd = (airmar.truWndDir - UPWIND_THRESHOLD)  % 360   #Define airmar.headings of both tacks
+        port = (airmar.truWndDir + UPWIND_THRESHOLD)  % 360
         if abs(compass_diff(airmar.heading, stbd)) >= abs(compass_diff(airmar.heading, port)):  #Which one are we closer to?
             targetHeading = port
         else:
             targetHeading = stbd
 
     #Running mode
-    elif abs(diff) > running_angle:
+    elif abs(diff) > DOWNWIND_THRESHOLD:
         pointOfSail = "Running"
-        stbd = (airmar.truWndDir - running_angle) % 360   #Define airmar.headings of both tacks
-        port = (airmar.truWndDir + running_angle) % 360
+        stbd = (airmar.truWndDir - DOWNWIND_THRESHOLD) % 360   #Define airmar.headings of both tacks
+        port = (airmar.truWndDir + DOWNWIND_THRESHOLD) % 360
         if abs(compass_diff(airmar.heading, stbd)) >= abs(compass_diff(airmar.heading, port)):  #Which one are we closer to?
             targetHeading = port
         else:
@@ -94,7 +87,7 @@ def publish_tactics():
     # What if on a reach but slide below course to the point you have to beat?
     # What if you sail past your destination on a beat and start running?
     # Implement Tacking
-    if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
+    if (time.time()-lastTack > TACK_DELAY):  #Supress frequent tacking
         if pointOfSail == "Running":                  #Transitions are reveresed for
             if onStbd and speed_stats.xte > leg.xte_max:                 #Beating and Running
                 rospy.loginfo("[tactics] Jibing to starboard");
