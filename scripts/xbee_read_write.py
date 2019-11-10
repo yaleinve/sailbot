@@ -20,7 +20,7 @@ def main():
 
     poll_thread = threading.Thread(target=poll, args=(spi, read_lock))
     poll_thread.daemon = True
-    poll_thread.run()
+    poll_thread.start()
 
     while True:
         to_send = raw_input("Type a message:")
@@ -48,33 +48,34 @@ def send_message(spi, msg):
     transmit_contents = transmit_header + bytearray(msg)
     checksum = calc_checksum(transmit_contents)
 
-    length = len(transmit_contents) + 1
+    length = len(transmit_contents)
     general_header = bytearray([0x7E, length >> 8, length & 0xFF])
 
-    bytes_to_transmit = general_header + transmit_contents + checksum
+    bytes_to_transmit = general_header + transmit_contents + bytearray([checksum])
     return spi.write(bytes_to_transmit)
 
 
 def finish_read(spi, buf):
-    start_loc = buf.find(0x7E)  # Start delimiter, see XBee User Guide for full format.
+    start_loc = buf.find(bytearray([0x7E]))  # Start delimiter, see XBee User Guide for full format.
     if start_loc != -1:
         buf = buf[start_loc:]
     else:
         buf = bytearray()
 
     while True:
-        start, buf = buffered_read(spi, buf, 1)[0]
-        if start != 0x7E:
+        start, buf = buffered_read(spi, buf, 1)
+        if start[0] != 0x7E:
             break
+        debug_print("Started read")
 
         header, buf = buffered_read(spi, buf, 3)
         length = (header[0] << 8) + header[1]
         assert header[2] == 0x90, "Message type not receive: %02x" % header[2]
 
         contents, buf = buffered_read(spi, buf, length - 1)
-        checksum, buf = buffered_read(spi, buf, 1)[0]
-        expected_checksum = calc_checksum(contents)
-        assert checksum == expected_checksum, "Incorrect checksum: received %02x, calculated %02x" % (checksum, expected_checksum)
+        checksum, buf = buffered_read(spi, buf, 1)
+        expected_checksum = calc_checksum(header[2:] + contents)
+        assert checksum[0] == expected_checksum, "Incorrect checksum: received %02x, calculated %02x" % (checksum[0], expected_checksum)
 
         print "Received: %s" % contents[11:]  # Message text starts at 11th byte
 
@@ -84,9 +85,12 @@ def buffered_read(spi, buf, count):
         return buf[:count], buf[count:]
     elif len(buf) > 0:
         new_bytes = spi.write(bytearray([0] * (count - len(buf))))
+        debug_print("Read " + repr(new_bytes))
         return buf + new_bytes, bytearray()
     else:
-        return spi.write(bytearray([0] * count)), bytearray()
+        new_bytes = spi.write(bytearray([0] * count))
+        debug_print("Read " + repr(new_bytes))
+        return new_bytes, bytearray()
 
 
 def calc_checksum(contents):
