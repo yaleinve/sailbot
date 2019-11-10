@@ -7,7 +7,7 @@ import mraa
 
 POLL_PERIOD = 0.5
 DEBUG = False
-PARTNER_ADDR = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+PARTNER_ADDR = [0x00, 0x13, 0xA2, 0x00, 0x41, 0x94, 0x16, 0x59]
 
 
 def main():
@@ -39,7 +39,7 @@ def poll(spi, read_lock):
         finish_read(spi, bytearray())
         read_lock.release()
 
-        time.sleep(POLL_PERIOD);
+        time.sleep(POLL_PERIOD)
 
 
 def send_message(spi, msg):
@@ -51,7 +51,7 @@ def send_message(spi, msg):
     length = len(transmit_contents) + 1
     general_header = bytearray([0x7E, length >> 8, length & 0xFF])
 
-    bytes_to_transmit = general_header + transmit_contnts + checksum
+    bytes_to_transmit = general_header + transmit_contents + checksum
     return spi.write(bytes_to_transmit)
 
 
