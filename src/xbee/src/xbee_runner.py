@@ -14,11 +14,17 @@ from captain.msg import LegInfo
 
 POLL_PERIOD = 0.5
 PARTNER_ADDR = [0x00, 0x13, 0xA2, 0x00, 0x41, 0x94, 0x16, 0x59]
+TOPIC_DEFS = [
+    ('/leg_info', LegInfo),
+]
 
 
 class XBee:
 
     def __init__(self):
+        self.recv_mapping = {topic: (type_, rospy.Publisher(topic, type_, queue_size=10))
+                        for (topic, type_) in TOPIC_DEFS}
+
         self.spi = mraa.Spi(0)
         # Setting the freqency is necessary to get meaningful values, but it's unclear what the
         # default frequency is and why it doesn't work.
@@ -45,6 +51,15 @@ class XBee:
             msg_json[field] = getattr(msg_obj, field)
         self.send_message(json.dumps(msg_json))
         self.finish_read()
+
+    def generic_receive(self, msg_dump):
+        msg_json = json.loads(msg_dump)
+        type_, pub = self.recv_mapping[msg_json['__topic__']]
+        msg_obj = type_()
+        for key, value in msg_json.items():
+            if key[:2] != '__':
+                setattr(msg_obj, key, value)
+        pub.publish(msg_obj)
 
     def send_message(self, msg):
         transmit_header = bytearray([0x10, 0x00]) + bytearray(PARTNER_ADDR) + bytearray([0xFF, 0xFE, 0x00, 0x00])  # See XBee User Guide p. 242
@@ -81,6 +96,7 @@ class XBee:
             assert checksum == expected_checksum, "Incorrect checksum: received %02x, calculated %02x" % (checksum, expected_checksum)
 
             print "Received: %s" % contents[11:]  # Message text starts at 11th byte
+            self.generic_receive(contents[11:])
 
     def buffered_read(self, count):
         if count <= len(self.recv_buf):
