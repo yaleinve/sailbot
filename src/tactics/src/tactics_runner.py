@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# tactics.py              Eric Anderson Mar 2015
 
-#Import statements
 import rospy
 import time
 from compassCalc import *
@@ -13,203 +11,140 @@ from airmar.msg import AirmarData
 from speed_calculator.msg import SpeedStats
 from captain.msg import LegInfo
 
-pub_tactics = rospy.Publisher("/nav_targets", NavTargets, queue_size = 10)
+
+tactics_pub = rospy.Publisher("/nav_targets", NavTargets, queue_size=10)
+leg = None
+speed_stats = None
+airmar = None
+
+
+tack = 'port'
+lastTackTime = time.time()
+
+
+# What is the minimum angle from the wind (when facing into it) we must maintain?
+UPWIND_THRESHOLD = 40.0  # degrees
+
+# How far downwind do we want to run?
+DOWNWIND_THRESHOLD = 165.0  # degrees (away from the wind)
+
+# How long do we have to wait to tack, at minimum?
+TACK_DELAY = 10.0  # seconds
+
 
 def initGlobals():
-  global target_course
-  global target_range
-  global heading
-  global apWndDir
-  global apWndSpd
-  global xte
-  global cog
-  global sog
-  global xteMax
-  global xteMin
-  global vmg
-  global vmgUp
-  global pointOfSail
-  global lastTack
-  global lastTargetHeading
-  global truWndDir
-  global legEndLat
-  global legEndLong
-  global currentLat
-  global currentLong
+    global lastTack
 
-
-  target_course = 0.0
-  target_range = 0.0
-  heading = 0.0
-  apWndDir = 0.0
-  apWndSpd = 0.0
-  xte = 0.0
-  cog = 0.0
-  sog = 0.0
-  xteMax = 0.0
-  xteMin = 0.0
-  vmg = 0.0
-  vmgUp = 0.0
-  pointOfSail = ""
-  lastTack = 0.0
-  lastTargetHeading = 0.0
-  truWndDir = 0.0
-  currentLat = 0.0
-  currentLong= 0.0
-  legEndLat = 0.0
-  legEndLong = 0.0
+    lastTack = 0.0
 
 
 
-#Publish tactics output message, target_heading.  This function contains the actual algorithm.
 def publish_tactics():
-  global lastTack  #The only global we'll write to
-  global lastTargetHeading
+    rospy.loginfo("[tactics] publishTactics()")
+    global lastTack, lastTargetHeading, pointOfSail, tack
 
-  #Constants for Racht. MUST BE EMPIRICALLY DETERMINED
-  pointing_angle = 50.0   #Can't point closer than 50 degrees to wind
-  running_angle = 165.0   #Don't want to sail deeper than this
-  delayBetweenTacks = 10.0 #Don't tack if tacked within the last x seconds
-                           #talk to eric what would be reasonable for this delay.
-                           #Be careful that this doesn't accidentally sail you out of box for station keeping!!
+    if leg is None:
+        rospy.loginfo("[tactics] leg is null")
+        return
+    if airmar is None:
+        rospy.loginfo("[tactics] airmar is null")
+        return
+    if speed_stats is None:
+        rospy.loginfo("[tactics] speed_stats is null")
+        return
 
-  #ACTUAL ALGORITHM:
+    target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
+    target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
+    wind_targ_angle = compass_diff(target_course, airmar.truWndDir)
 
-  diff = compass_diff(target_course, truWndDir)  #From where we want to go to the wind
-  #rospy.loginfo("diff is : " + str(diff))                                                            # (remember wind vector orientation)
+    # When do we want to tack?
+    # Ideally we wouldn't tack at all because we lose momentum. But when the target's
+    # very upwind we don't have a choice; we can't sail directly upwind.
+    # Instead, we tack when we leave the cross track area, making a zigzag pattern.
 
-  #Reaching Mode is default
-  targetHeading = target_course
-  pointOfSail = "Reaching"
-  onStbd = (compass_diff(heading,truWndDir ) > 0.0)
+    # Important context: XTE, or cross track error, is the distance (in meters) from
+    # the line between the initial position and the target.
+    # It's negative when you're to the left of that line, when it's oriented so that the target is at the top.
 
-  stbd = 0.0
-  port = 0.0
+    if abs(wind_targ_angle) <= UPWIND_THRESHOLD:
+        # we're sailing into the wind.
+        point_of_sail = "Pointing (%s)" % tack
 
-  #Beating Mode
-  if abs(diff) < pointing_angle:
-    pointOfSail = "Beating"
-    stbd = (truWndDir - pointing_angle)  % 360   #Define headings of both tacks
-    port = (truWndDir + pointing_angle)  % 360
-    if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
-      targetHeading = port
+        if speed_stats.xte < leg.xte_min:  # we're out of XTE on the left
+            tack = 'port'  # put the wind on the left of us, sailing right
+            rospy.loginfo("[tactics] Tack to port")
+
+        if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
+            tack = 'starboard'  # put the wind on the right of us, sailing left
+            rospy.loginfo("[tactics] Tack to starboard")
+
+        # For now we sail into the wind until the target isn't in the wind anymore.
+        result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'port' else -UPWIND_THRESHOLD)
+    elif abs(wind_targ_angle) <= UPWIND_THRESHOLD:
+        # we're sailing roughly perpendicular to the wind.
+        # We can just head directly to the target and sails_rudder is smart enough to handle the sail.
+
+        point_of_sail = "Hauling / Beating"
+        result_heading = target_course
     else:
-      targetHeading = stbd
+        # we don't want to sail directly downwind either
+        point_of_sail = "Running (%s)" % tack
 
-  #Running mode
-  elif abs(diff) > running_angle:
-    pointOfSail = "Running"
-    stbd = (truWndDir - running_angle) % 360   #Define headings of both tacks
-    port = (truWndDir + running_angle) % 360
-    if abs(compass_diff(heading, stbd)) >= abs(compass_diff(heading, port)):  #Which one are we closer to?
-      targetHeading = port
-    else:
-      targetHeading = stbd
+        if speed_stats.xte < leg.xte_min:  # we're out of XTE on the left
+            tack = 'port'  # put the wind on the left of us, sailing right
+            rospy.loginfo("[tactics] Jibe to port")
 
+        if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
+            tack = 'starboard'  # put the wind on the right of us, sailing left
+            rospy.loginfo("[tactics] Jibe to starboard")
 
-  #I think this algorithm might have lots of weird edge cases:
-  #What if on a reach but slide below course to the point you have to beat?
-  #What if you sail past your destination on a beat and start running?
-  #Implement Tacking
-  if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
-    if pointOfSail == "Running":                  #Transitions are reveresed for
-      if onStbd and xte > xteMax:                 #Beating and Running
-        rospy.loginfo("[tactics] Jibing to starboard");
-        targetHeading = port                      #Do we want to signal a jibe????
-        lastTack = time.time()
-      elif (not onStbd) and xte < xteMin:
-        rospy.loginfo("[tactics] Jibing to port");
-        targetHeading = stbd
-        lastTack = time.time()
-      lastTargetHeading = targetHeading
-    elif pointOfSail == "Beating":
-      if onStbd and xte < xteMin:
-        rospy.loginfo("[tactics] Tacking to starboard");
-        targetHeading = port
-        lastTack = time.time()
-      elif (not onStbd) and xte > xteMax:
-        rospy.loginfo("[tactics] Tacking to port");
-        targetHeading = stbd
-        lastTack = time.time()
-      lastTargetHeading = targetHeading
-  else:
-    targetHeading = lastTargetHeading
+        # the result will be sailing downwind until we get close enough that the target isn't directly in the
+        # wind, then we turn around into the target
+        result_heading = airmar.truWndDir - (DOWNWIND_THRESHOLD if tack == 'port' else -DOWNWIND_THRESHOLD)
 
-  msg = NavTargets()  #Instantiate a message
-  msg.pointOfSail = pointOfSail  #From globals
-  
-  msg.targetHeading = targetHeading
-  msg.targetCourse = target_course
-  msg.targetRange = target_range
-  pub_tactics.publish(msg) #Publish the message
+    msg = NavTargets()
+
+    msg.pointOfSail = pointOfSail
+    msg.targetHeading = result_heading
+    msg.targetCourse = target_course
+    msg.targetRange = target_range
+
+    tactics_pub.publish(msg)
 
 
-#Put the data from the airmar message into global variables
 def airmar_callback(data):
-  global heading
-  global apWndSpd
-  global apWndDir
-  global cog
-  global sog
-  global truWndDir
-  global currentLat
-  global currentLong
-  global target_course
-  global target_range
-  global legEndLat
-  global legEndLong
+    global airmar, target_course, target_range
+    airmar = data
 
-  heading  = data.heading
-  apWndSpd = data.apWndSpd
-  apWndDir = data.apWndDir
-  cog = data.cog
-  sog = data.sog
-  truWndDir = data.truWndDir
-  currentLat = data.lat
-  currentLong = data.long
-
-  # This is all that the old navigator node did:
-  target_course = gpsBearing(currentLat, currentLong, legEndLat, legEndLong)
-  target_range =  gpsDistance(currentLat, currentLong, legEndLat, legEndLong)
-
-  # No need to publish here, because speed_stats_callback will be called very soon
+    if leg is None:
+        return
 
 
 def speed_stats_callback(data):
-  global xte
-  global vmg
-  global vmgUp
 
-  xte = data.xte
-  vmg = data.vmg
-  vmgUp = data.vmgup
+    global speed_stats
+    speed_stats = data
 
-  publish_tactics()  # We publish every time the airmar updates
+    publish_tactics()  # We publish every time the airmar updates
 
 
-#Only need a few things from leg_info
 def leg_info_callback(data):
-  global xteMax
-  global xteMin
-  global legEndLat
-  global legEndLong
+    rospy.loginfo("[tactics] leg_info_callback()")
+    global leg
+    leg = data
 
-  xteMin = data.xte_min
-  xteMax = data.xte_max
-  legEndLat = data.end_lat
-  legEndLong = data.end_long
 
-def listener():
-  initGlobals()
+def listen():
+    initGlobals()
 
-  rospy.init_node("tactics")  #Must init node to subscribe
-  rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
-  rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
-  rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
-  rospy.loginfo("[tactics] All subscribed, tactics has started!")
+    rospy.init_node("tactics")
+    rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)
+    rospy.Subscriber("/speed_stats", SpeedStats, speed_stats_callback)
+    rospy.Subscriber("/leg_info", LegInfo, leg_info_callback)
+    rospy.loginfo("[tactics] All subscribed, tactics has started!")
 
-  rospy.spin()
+    rospy.spin()
 
 
 if __name__ == "__main__":
-  listener() 	#Listen to our subscriptions
+    listen()
