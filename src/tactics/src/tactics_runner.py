@@ -87,49 +87,6 @@ def publish_tactics():
         point_of_sail = "Hauling / Beating"
         result_heading = target_course
     else:
-<<<<<<< HEAD
-      targetHeading = stbd
-
-
-  #I think this algorithm might have lots of weird edge cases:
-  #What if on a reach but slide below course to the point you have to beat?
-  #What if you sail past your destination on a beat and start running?
-  #Implement Tacking
-  if (time.time()-lastTack > delayBetweenTacks):  #Supress frequent tacking
-    if pointOfSail == "Running":                  #Transitions are reveresed for
-      if onStbd and xte > xteMax:                 #Beating and Running
-        rospy.loginfo("[tactics] Jibing to starboard");
-        targetHeading = port                      #Do we want to signal a jibe????
-        lastTack = time.time()
-      elif (not onStbd) and xte < xteMin:
-        rospy.loginfo("[tactics] Jibing to port");
-        targetHeading = stbd
-        lastTack = time.time()
-      lastTargetHeading = targetHeading
-    elif pointOfSail == "Beating":
-      if onStbd and xte < xteMin:
-        rospy.loginfo("[tactics] Tacking to starboard");
-        targetHeading = port
-        lastTack = time.time()
-      elif (not onStbd) and xte > xteMax:
-        rospy.loginfo("[tactics] Tacking to port");
-        targetHeading = stbd
-        lastTack = time.time()
-      lastTargetHeading = targetHeading
-  else:
-    targetHeading = lastTargetHeading
-
-  msg = NavTargets()  #Instantiate a message
-  msg.pointOfSail = pointOfSail  #From globals
-
-  msg.targetHeading = targetHeading
-  msg.targetCourse = target_course
-  msg.targetRange = target_range
-  pub_tactics.publish(msg) #Publish the message
-
-
-#Put the data from the airmar message into global variables
-=======
         # we don't want to sail directly downwind either
         point_of_sail = "Running (%s)" % tack
 
@@ -155,7 +112,6 @@ def publish_tactics():
     tactics_pub.publish(msg)
 
 
->>>>>>> aca440db91f6dffc082d59ec5bd64ca9afa199dc
 def airmar_callback(data):
     global airmar, target_course, target_range
     airmar = data
