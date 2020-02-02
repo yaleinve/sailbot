@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 #captain.py                                     Eric Anderson Mar 15
 #Implements the captain node as described in the  specs
 #Andrew Malta 4/17/15 - fixing things
@@ -344,7 +344,6 @@ class Captain():
                                  #message from competition_info
 
     def listener(self):
-        rospy.init_node("captain")
         rospy.loginfo("[captain] Subscribing to competition_info...")
         rospy.Subscriber("/competition_info", CompetitionInfo, self.competition_info_callback)
         rospy.loginfo("[captain] Subscribing to airmar_data...")
@@ -370,5 +369,6 @@ class Captain():
 
 
 if __name__ == "__main__":
+    rospy.init_node("captain")
     cap = Captain()
     cap.listener()

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# tactics.py              Eric Anderson Mar 2015
+#!/usr/bin/env python2.7
 
 #Import statements
 import rospy
@@ -19,7 +18,7 @@ def initGlobals():
 	global airmar_msg
 	global apVecs,truVecs,apRe,truRe
 	apRe,truRe=[],[]
-	
+
 	apVecs=[]
 	truVecs=[]
 
@@ -85,7 +84,7 @@ def get_smoothed_data(apVecs,truVecs,apRe,truRe):
 	#apRe[-1],truRe[-1]#
 	return mean_smoothed(apRe),mean_smoothed(truRe)
 
-		
+
 
 def publish_smoothed():
 	global airmar_msg,apVecs,truVecs,apRe,truRe

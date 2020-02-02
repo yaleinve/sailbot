@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 
 #Updated by Eric Anderson 12/15 to adapt for Edison and recent arch changes,
 #namely that we rely solely on airmar (and camera) for sensing - no navsat

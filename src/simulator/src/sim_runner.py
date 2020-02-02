@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # sim_runner.py   Linc Berkley  Dec 17
 # Implements a physics-based simulator to test the other nodes
 # Adapated from SailsRudder simulator (written in Go) at https://github.com/acshi/acshi/tree/master/sailing
@@ -39,7 +39,7 @@ def getNextWind():
 	wd2+=np.random.normal(loc=-wd2/W_R2,scale=W_DSIG2)
 	W_A+=np.random.normal(scale=W_A_SIG)
 	return Vector.from_polar(wv, (W_A+W_D1*wd1+W_D2*wd2+np.random.normal(loc=0,scale=12))%360)
-	
+
 class Simulator:
     def __init__(self):
         # Coordinate convention: x-axis is NORTH, y-axis is EAST. This makes clockwise rotations positive, with

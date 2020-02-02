@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # Acshi Haggenmiller 11/15
 # Sail and rudder controller originally developed in a simulated sailing environment (sailingsimulator.go)
 # Largely PD control of rudder and PI control of sails to steer the boat

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # tactics.py              Eric Anderson Mar 2015
 
 #Import statements
@@ -137,7 +137,7 @@ def publish_tactics():
 
   msg = NavTargets()  #Instantiate a message
   msg.pointOfSail = pointOfSail  #From globals
-  
+
   msg.targetHeading = targetHeading
   msg.targetCourse = target_course
   msg.targetRange = target_range
