@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# tactics.py              Eric Anderson Mar 2015
 
-#Import statements
 import rospy
 import time
 from compassCalc import *
@@ -19,105 +17,100 @@ leg = None
 speed_stats = None
 airmar = None
 
-# What is the minimum angle from the wind (when facing into it) we must maintain?
-UPWIND_THRESHOLD = 45.0  # degrees
 
-# How far downwind can we point without sailing too unsafely with the wind?
-DOWNWIND_THRESHOLD = 15.0  # degrees
+tack = 'port'
+lastTackTime = time.time()
+
+
+# What is the minimum angle from the wind (when facing into it) we must maintain?
+UPWIND_THRESHOLD = 40.0  # degrees
+
+# How far downwind do we want to run?
+DOWNWIND_THRESHOLD = 165.0  # degrees (away from the wind)
 
 # How long do we have to wait to tack, at minimum?
 TACK_DELAY = 10.0  # seconds
 
 
 def initGlobals():
-    global target_course
-    global target_range
-    global pointOfSail
     global lastTack
-    global lastTargetHeading
 
-    target_course = 0.0
-    target_range = 0.0
-    pointOfSail = ""
     lastTack = 0.0
-    lastTargetHeading = 0.0
 
 
 
 def publish_tactics():
-    global lastTack  # The only global we'll write to
-    global lastTargetHeading
+    rospy.loginfo("[tactics] publishTactics()")
+    global lastTack, lastTargetHeading, pointOfSail, tack
 
-    if leg is None or airmar is None or speed_stats is None:
+    if leg is None:
+        rospy.loginfo("[tactics] leg is null")
+        return
+    if airmar is None:
+        rospy.loginfo("[tactics] airmar is null")
+        return
+    if speed_stats is None:
+        rospy.loginfo("[tactics] speed_stats is null")
         return
 
-    #ACTUAL ALGORITHM:
+    target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
+    target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
+    wind_targ_angle = compass_diff(target_course, airmar.truWndDir)
 
-    diff = compass_diff(target_course, airmar.truWndDir)  #From where we want to go to the wind
+    # When do we want to tack?
+    # Ideally we wouldn't tack at all because we lose momentum. But when the target's
+    # very upwind we don't have a choice; we can't sail directly upwind.
+    # Instead, we tack when we leave the cross track area, making a zigzag pattern.
 
-    #Reaching Mode is default
-    targetHeading = target_course
-    pointOfSail = "Reaching"
-    onStbd = (compass_diff(airmar.heading,airmar.truWndDir ) > 0.0)
+    # Important context: XTE, or cross track error, is the distance (in meters) from
+    # the line between the initial position and the target.
+    # It's negative when you're to the left of that line, when it's oriented so that the target is at the top.
 
-    stbd = 0.0
-    port = 0.0
+    if abs(wind_targ_angle) <= UPWIND_THRESHOLD:
+        # we're sailing into the wind.
+        point_of_sail = "Pointing (%s)" % tack
 
-    #Beating Mode
-    if abs(diff) < UPWIND_THRESHOLD:
-        pointOfSail = "Beating"
-        stbd = (airmar.truWndDir - UPWIND_THRESHOLD)  % 360   #Define airmar.headings of both tacks
-        port = (airmar.truWndDir + UPWIND_THRESHOLD)  % 360
-        if abs(compass_diff(airmar.heading, stbd)) >= abs(compass_diff(airmar.heading, port)):  #Which one are we closer to?
-            targetHeading = port
-        else:
-            targetHeading = stbd
+        if speed_stats.xte < leg.xte_min:  # we're out of XTE on the left
+            tack = 'port'  # put the wind on the left of us, sailing right
+            rospy.loginfo("[tactics] Tack to port")
 
-    #Running mode
-    elif abs(diff) > DOWNWIND_THRESHOLD:
-        pointOfSail = "Running"
-        stbd = (airmar.truWndDir - DOWNWIND_THRESHOLD) % 360   #Define airmar.headings of both tacks
-        port = (airmar.truWndDir + DOWNWIND_THRESHOLD) % 360
-        if abs(compass_diff(airmar.heading, stbd)) >= abs(compass_diff(airmar.heading, port)):  #Which one are we closer to?
-            targetHeading = port
-        else:
-            targetHeading = stbd
+        if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
+            tack = 'starboard'  # put the wind on the right of us, sailing left
+            rospy.loginfo("[tactics] Tack to starboard")
 
-    # I think this algorithm might have lots of weird edge cases:
-    # What if on a reach but slide below course to the point you have to beat?
-    # What if you sail past your destination on a beat and start running?
-    # Implement Tacking
-    if (time.time()-lastTack > TACK_DELAY):  #Supress frequent tacking
-        if pointOfSail == "Running":                  #Transitions are reveresed for
-            if onStbd and speed_stats.xte > leg.xte_max:                 #Beating and Running
-                rospy.loginfo("[tactics] Jibing to starboard");
-                targetHeading = port                      #Do we want to signal a jibe????
-                lastTack = time.time()
-            elif (not onStbd) and speed_stats.xte < leg.xte_min:
-                rospy.loginfo("[tactics] Jibing to port");
-                targetHeading = stbd
-                lastTack = time.time()
-            lastTargetHeading = targetHeading
-        elif pointOfSail == "Beating":
-            if onStbd and speed_stats.xte < leg.xte_min:
-                rospy.loginfo("[tactics] Tacking to starboard");
-                targetHeading = port
-                lastTack = time.time()
-            elif (not onStbd) and speed_stats.xte > leg.xte_max:
-                rospy.loginfo("[tactics] Tacking to port");
-                targetHeading = stbd
-                lastTack = time.time()
-            lastTargetHeading = targetHeading
+        # For now we sail into the wind until the target isn't in the wind anymore.
+        result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'port' else -UPWIND_THRESHOLD)
+    elif abs(wind_targ_angle) <= UPWIND_THRESHOLD:
+        # we're sailing roughly perpendicular to the wind.
+        # We can just head directly to the target and sails_rudder is smart enough to handle the sail.
+
+        point_of_sail = "Hauling / Beating"
+        result_heading = target_course
     else:
-        targetHeading = lastTargetHeading
+        # we don't want to sail directly downwind either
+        point_of_sail = "Running (%s)" % tack
+
+        if speed_stats.xte < leg.xte_min:  # we're out of XTE on the left
+            tack = 'port'  # put the wind on the left of us, sailing right
+            rospy.loginfo("[tactics] Jibe to port")
+
+        if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
+            tack = 'starboard'  # put the wind on the right of us, sailing left
+            rospy.loginfo("[tactics] Jibe to starboard")
+
+        # the result will be sailing downwind until we get close enough that the target isn't directly in the
+        # wind, then we turn around into the target
+        result_heading = airmar.truWndDir - (DOWNWIND_THRESHOLD if tack == 'port' else -DOWNWIND_THRESHOLD)
 
     msg = NavTargets()
+
     msg.pointOfSail = pointOfSail
-    msg.targetHeading = targetHeading
+    msg.targetHeading = result_heading
     msg.targetCourse = target_course
     msg.targetRange = target_range
 
     tactics_pub.publish(msg)
+
 
 def airmar_callback(data):
     global airmar, target_course, target_range
@@ -126,11 +119,9 @@ def airmar_callback(data):
     if leg is None:
         return
 
-    # Where is the target, relative to us? (by angle and by distance)
-    target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
-    target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
 
 def speed_stats_callback(data):
+
     global speed_stats
     speed_stats = data
 
@@ -138,8 +129,10 @@ def speed_stats_callback(data):
 
 
 def leg_info_callback(data):
+    rospy.loginfo("[tactics] leg_info_callback()")
     global leg
     leg = data
+
 
 def listen():
     initGlobals()
