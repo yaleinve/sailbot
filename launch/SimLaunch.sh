@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tmux new-session -d -s SimStack
+tmux new-session -d -s SimStack "bash --rcfile launch/setup.bash"
 tmux set-option -s -t SimStack default-command "bash --rcfile launch/setup.bash"
 tmux split-window -v
 tmux split-window -v
