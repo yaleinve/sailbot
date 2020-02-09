@@ -23,7 +23,7 @@ lastTackTime = time.time()
 
 
 # What is the minimum angle from the wind (when facing into it) we must maintain?
-UPWIND_THRESHOLD = 40.0  # degrees
+UPWIND_THRESHOLD = 50.0  # degrees
 
 # How far downwind do we want to run?
 DOWNWIND_THRESHOLD = 165.0  # degrees (away from the wind)
@@ -40,11 +40,11 @@ def initGlobals():
 
 
 def publish_tactics():
-    rospy.loginfo("[tactics] publishTactics()")
+    # rospy.loginfo("[tactics] publishTactics()")
     global lastTack, lastTargetHeading, pointOfSail, tack
 
     if leg is None:
-        rospy.loginfo("[tactics] leg is null")
+        # rospy.loginfo("[tactics] leg is null")
         return
     if airmar is None:
         rospy.loginfo("[tactics] airmar is null")
@@ -56,6 +56,8 @@ def publish_tactics():
     target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
     target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
     wind_targ_angle = compass_diff(target_course, airmar.truWndDir)
+
+    rospy.loginfo('[tactics] Angle between wind and target: ' + str(wind_targ_angle))
 
     # When do we want to tack?
     # Ideally we wouldn't tack at all because we lose momentum. But when the target's
@@ -80,7 +82,7 @@ def publish_tactics():
 
         # For now we sail into the wind until the target isn't in the wind anymore.
         result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'port' else -UPWIND_THRESHOLD)
-    elif abs(wind_targ_angle) <= UPWIND_THRESHOLD:
+    elif abs(wind_targ_angle) <= DOWNWIND_THRESHOLD:
         # we're sailing roughly perpendicular to the wind.
         # We can just head directly to the target and sails_rudder is smart enough to handle the sail.
 
@@ -104,10 +106,11 @@ def publish_tactics():
 
     msg = NavTargets()
 
-    msg.pointOfSail = pointOfSail
+    msg.pointOfSail = point_of_sail
     msg.targetHeading = result_heading
     msg.targetCourse = target_course
     msg.targetRange = target_range
+
 
     tactics_pub.publish(msg)
 

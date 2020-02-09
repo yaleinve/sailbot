@@ -3,13 +3,9 @@
 # Implements the captain node as described in the  specs
 # Andrew Malta 4/17/15 - fixing things
 
-import time
-import roslib
 import rospy
-import sys
 import Queue
 import math
-from enum import Enum
 
 from enum import Enum
 from compassCalc import *
@@ -50,24 +46,6 @@ class Mode(Enum):
     PRECISION_NAVIGATION = "PrecisionNavigation"
     COLLISION_AVOIDANCE = "CollisionAvoidance"
     SEARCH = "Search"
-
-class Mode(Enum):
-    # Debugging
-    WAIT = "Wait"
-    SAIL_TO_POINT = "SailToPoint"
-    MAINTAIN_HEADING = "MaintainHeading"
-    MAINTAIN_POINT_OF_SAIL = "MaintainPointOfSail"
-
-    # Competition
-    ROUND_AND_RETURN = "RoundAndReturn"
-    STATION_KEEPING = "StationKeeping"
-
-    # New Competition
-    ENDURANCE = "Endurance"
-    PRECISION_NAVIGATION = "PrecisionNavigation"
-    COLLISION_AVOIDANCE = "CollisionAvoidance"
-    SEARCH = "Search"
-
 
 class Captain():
     # Internal State
@@ -160,6 +138,7 @@ class Captain():
 
         #Skip everything for wait   #TODO: change this?
         if self.compMode == Mode.WAIT:
+            rospy.loginfo("[captain] Waiting...")
             return
 
         if self.compMode == Mode.STATION_KEEPING:
@@ -210,8 +189,8 @@ class Captain():
             pass
 
         #Sail to a given GPS Point
-        elif self.compMode == Mode.SAIL_TO_POINT:          #Sail to a gps target
-            #rospy.loginfo("[captain] I'm in SailToPoint!")
+        elif self.compMode == 'SailToPoint':          #Sail to a gps target
+            rospy.loginfo("[captain] I'm in SailToPoint!")
             self.legQueue.put(Waypoint(self.gpsLat1,self.gpsLong1,self.xteMin,self.xteMax)) #Insert a gps loc
             #self.legQueue.put(Waypoint(0,0,-43,43))
 
@@ -302,7 +281,7 @@ class Captain():
         #####  ILLEGAL INPUT  ###################
 
         else:
-            rospy.loginfo('[captain] illegal input switching to wait')
+            rospy.loginfo('[captain] illegal input "' + self.compMode + '" (expecting ' + str(Mode.SAIL_TO_POINT) + '), switching to wait')
             self.compMode = Mode.WAIT        #If invalid input, do nothing
 
         # Let's kick things off!
