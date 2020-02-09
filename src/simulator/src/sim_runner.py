@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # sim_runner.py   Linc Berkley  Dec 17
 # Implements a physics-based simulator to test the other nodes
 # Adapated from SailsRudder simulator (written in Go) at https://github.com/acshi/acshi/tree/master/sailing
@@ -12,34 +12,37 @@ from airmar.msg import AirmarData
 
 import numpy as np
 
-wa=0
-wv=1000 # wind velocity
-wd1,wd2=0,0
+wa = 0
+wv = 1000  # wind velocity
+wd1, wd2 = 0, 0
 
-W_A=30
-W_A_SIG=1.5
-W_DA_V=0
-W_D1=20
-W_D2=20
-W_R1=100
-W_R2=5
-W_DSIG1=1.0/W_R1
-W_DSIG2=1.0/W_R2
+W_A = 30
+W_A_SIG = 1.5
+W_DA_V = 0
+W_D1 = 20
+W_D2 = 20
+W_R1 = 100
+W_R2 = 5
+W_DSIG1 = 1.0 / W_R1
+W_DSIG2 = 1.0 / W_R2
+
 
 def getFirstWind():
-	global wa,wv,wd1,wd2
-	wa=0
-	wv=10
-	wd1,wd2=0,0
-	return Vector.from_polar(wv,wa)
+    global wa, wv, wd1, wd2
+    wa = 0
+    wv = 10
+    wd1, wd2 = 0, 0
+    return Vector.from_polar(wv, wa)
+
 
 def getNextWind():
-	# global wa,wv,wd1,wd2,W_A,W_DA_V
-	# wd1+=np.random.normal(loc=-wd1/W_R1,scale=W_DSIG1)
-	# wd2+=np.random.normal(loc=-wd2/W_R2,scale=W_DSIG2)
-	# W_A+=np.random.normal(scale=W_A_SIG)
-	return Vector.from_polar(wv, W_A)#(W_A+W_D1*wd1+W_D2*wd2+np.random.normal(loc=0,scale=0))%360)
-	
+    global wa, wv, wd1, wd2, W_A, W_DA_V
+    wd1 += np.random.normal(loc=-wd1 / W_R1, scale=W_DSIG1)
+    wd2 += np.random.normal(loc=-wd2 / W_R2, scale=W_DSIG2)
+    W_A += np.random.normal(scale=W_A_SIG)
+    return Vector.from_polar(wv, (W_A + W_D1 * wd1 + W_D2 * wd2 + np.random.normal(loc=0, scale=12)) % 360)
+
+
 class Simulator:
     def __init__(self):
         # Coordinate convention: x-axis is NORTH, y-axis is EAST. This makes clockwise rotations positive, with
@@ -92,7 +95,7 @@ class Simulator:
         self.set_rudder = msg.rudderPos + self.sail_adjust
 
     def physics_step(self):
-    	self.wind=getNextWind()
+        self.wind = getNextWind()
         # Numerical integration procedure based on https://en.wikipedia.org/wiki/Verlet_integration#Velocity_Verlet
         self.update_sails()
         # These are called force and torque in calc_accelerations, so I'm not
@@ -193,9 +196,11 @@ class Simulator:
         main_force = Vector.from_polar(1, self.ang.z + self.main).normal().vector_proj(ap_wind_vec).mult(main_constant)
         jib_force = Vector.from_polar(1, self.ang.z + self.jib).normal().vector_proj(ap_wind_vec).mult(jib_constant)
         keel_force = Vector.from_polar(1, self.ang.z).normal().vector_proj(self.v.neg()).mult(keel_constant)
-        axial_drag = Vector.from_polar(1, self.ang.z).normal().vector_proj(self.v.neg().comp_mult(self.v.comp_abs())).mult(axial_friction)
+        axial_drag = Vector.from_polar(1, self.ang.z).normal().vector_proj(
+            self.v.neg().comp_mult(self.v.comp_abs())).mult(axial_friction)
         forward_drag = self.v.neg().comp_mult(self.v.comp_abs()).mult(forward_friction)
-        rudder_force = Vector.from_polar(1, self.ang.z + self.set_rudder).normal().vector_proj(self.v.neg()).mult(rudder_constant)
+        rudder_force = Vector.from_polar(1, self.ang.z + self.set_rudder).normal().vector_proj(self.v.neg()).mult(
+            rudder_constant)
 
         main_torque = inverse_moment_inertia.comp_mult(main_center.cross(main_force))
         jib_torque = inverse_moment_inertia.comp_mult(jib_center.cross(jib_force))
@@ -208,14 +213,16 @@ class Simulator:
         gravity_torque = inverse_moment_inertia.comp_mult(mass_center.cross(grav_force))
 
         forces = main_force.add(jib_force).add(keel_force).add(rudder_force).add(axial_drag).add(forward_drag)
-        torques = main_torque.add(jib_torque).add(keel_torque).add(rudder_torque).add(gravity_torque).add(angular_drag_torque)
+        torques = main_torque.add(jib_torque).add(keel_torque).add(rudder_torque).add(gravity_torque).add(
+            angular_drag_torque)
         return forces, torques
 
     # Get apparent wind vector with compass direction
     # Unlike in sails_rudder and airmar, direction is not relative to heading
     # Not a field, because it would be a pain to relcalculate it whenever velocity is updated)
     def ap_wind(self):
-        return self.wind.add(self.v)  # Add, rather than subtract, because "wind direction" is the direction wind is coming from
+        return self.wind.add(
+            self.v)  # Add, rather than subtract, because "wind direction" is the direction wind is coming from
 
     # Apparent wind relative to heading, as used in airmar and sails_rudder
     def rel_wind(self):
@@ -322,8 +329,10 @@ def rotate(x, y, a):
     ar = math.radians(a)
     return (x * math.cos(ar) - y * math.sin(ar)), (x * math.sin(ar) + y * math.cos(ar))
 
+
 def debug_signal_handler(signal, frame):
     pdb.set_trace()
+
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, debug_signal_handler)

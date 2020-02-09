@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2.7
 # captain/hardware_helper.py  Linc Berkley Dec 17
 # Provides services for captain_runner to access real hardware
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 #Eric Anderson						12/15
 #Updates servo_control to reflect new output style for edison
 #using mraa library
