@@ -141,13 +141,13 @@ class Simulator:
         main_off_wind = angle_180_range(self.main - wind_rel_dir)
         jib_off_wind = angle_180_range(self.jib - wind_rel_dir)
 
-        if main_off_wind * (wind_rel_dir - self.set_main) > 0 and main_pos_possible:
+        if main_off_wind * (wind_rel_dir - self.main) > 0 and main_pos_possible:
             # If wind is pushing sail toward the equilibrium position, and that position is possible, the sail will swing to it
             self.main = wind_rel_dir
         else:
             # Otherwise, it will swing toward the max position that the wind is pushing it toward
             self.main = math.copysign(self.set_main, main_off_wind)
-        if jib_off_wind * (wind_rel_dir - self.set_jib) > 0 and jib_pos_possible:
+        if jib_off_wind * (wind_rel_dir - self.jib) > 0 and jib_pos_possible:
             # If wind is pushing sail toward the equilibrium position, and that position is possible, the sail will swing to it
             self.jib = wind_rel_dir
         else:
