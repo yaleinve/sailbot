@@ -32,26 +32,13 @@ DOWNWIND_THRESHOLD = 165.0  # degrees (away from the wind)
 TACK_DELAY = 10.0  # seconds
 
 
-def initGlobals():
-    global lastTack
-
-    lastTack = 0.0
-
 
 
 def publish_tactics():
-    # rospy.loginfo("[tactics] publishTactics()")
     global lastTack, lastTargetHeading, pointOfSail, tack
 
-    if leg is None:
-        # rospy.loginfo("[tactics] leg is null")
-        return
-    if airmar is None:
-        rospy.loginfo("[tactics] airmar is null")
-        return
-    if speed_stats is None:
-        rospy.loginfo("[tactics] speed_stats is null")
-        return
+    # We have to wait for the first messages to start coming in
+    if leg is None or airmar is None or speed_stats is None: return
 
     target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
     target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
@@ -73,12 +60,15 @@ def publish_tactics():
         point_of_sail = "Pointing (%s)" % tack
 
         if speed_stats.xte < leg.xte_min:  # we're out of XTE on the left
-            tack = 'port'  # put the wind on the left of us, sailing right
+            tack = 'starboard'  # put the wind on the left of us, sailing right
+            # tack = 'port' if wind_targ_angle < 0 else 'starboard'
+            rospy.loginfo("[tactics] Tack to starboard")
+
+        elif speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
+            tack = 'port'  # put the wind on the right of us, sailing left
+            # tack = 'port' if wind_targ_angle < 0 else 'starboard'
             rospy.loginfo("[tactics] Tack to port")
 
-        if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
-            tack = 'starboard'  # put the wind on the right of us, sailing left
-            rospy.loginfo("[tactics] Tack to starboard")
 
         # For now we sail into the wind until the target isn't in the wind anymore.
         result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'port' else -UPWIND_THRESHOLD)
@@ -138,7 +128,6 @@ def leg_info_callback(data):
 
 
 def listen():
-    initGlobals()
 
     rospy.init_node("tactics")
     rospy.Subscriber("/airmar_data", AirmarData, airmar_callback)

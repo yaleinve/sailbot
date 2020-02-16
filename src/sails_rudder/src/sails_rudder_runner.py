@@ -148,7 +148,7 @@ class SailsRudder():
 
         # Do not even attempt to sail into the wind
         if abs(normalizeAngle(self.targetHeading - self.trueWindDirection)) < self.minPointingAngle:
-            rospy.logwarn("Attempting to sail at impossible target heading: " + str(normalizeAngle(self.targetHeading - self.apparentWindDirection)))
+            rospy.logwarn("Attempting to sail too far into the wind - target heading " + str(normalizeAngle(self.targetHeading - self.apparentWindDirection)))
             return
 
         # Calculate the limits of PID output values
@@ -300,10 +300,18 @@ class SailsRudder():
         if abs(newJibPos) < self.minClosedAngle:
             newJibPos = -self.minClosedAngle if newJibPos < 0 else self.minClosedAngle
 
-        # Now that calculations are done, since we can't control which way the sails go,
-        # we only publish positive values for them
-        newMainPos = abs(newMainPos)
-        newJibPos = abs(newJibPos)
+        # The jibing maneuver overrides other sail controls because we must pull in the sails for it to work.
+        rospy.loginfo("[sails-rudder] Angle to wind: " + str(normalizeAngle(self.targetHeading - self.trueWindDirection)))
+        if abs(normalizeAngle(self.boatHeading - self.trueWindDirection)) > self.runningAngle:
+            rospy.loginfo("[sails-rudder] Jibing - pulling jib and main in!")
+            newMainPos = 0
+            newJibPos = 0
+        else:
+            # Now that calculations are done, since we can't control which way the sails go,
+            # we only publish positive values for them
+            newMainPos = abs(newMainPos)
+            newJibPos = abs(newJibPos)
+
 
         # Smoothen out the change to the sails
         self.mainPos = lerp(4.0 * controlInterval, 0, 1, self.mainPos, newMainPos)
