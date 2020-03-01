@@ -11,14 +11,13 @@ from airmar.msg import AirmarData
 from speed_calculator.msg import SpeedStats
 from captain.msg import LegInfo
 
-
 tactics_pub = rospy.Publisher("/nav_targets", NavTargets, queue_size=10)
 leg = None
 speed_stats = None
 airmar = None
 
 
-tack = 'port'
+tack = None
 lastTackTime = time.time()
 
 
@@ -43,8 +42,6 @@ def publish_tactics():
     target_course = gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
     target_range = gpsDistance(airmar.lat, airmar.long, leg.end_lat, leg.end_long)
     wind_targ_angle = compass_diff(target_course, airmar.truWndDir)
-
-    rospy.loginfo('[tactics] Angle between wind and target: ' + str(wind_targ_angle))
 
     # When do we want to tack?
     # Ideally we wouldn't tack at all because we lose momentum. But when the target's
@@ -71,7 +68,10 @@ def publish_tactics():
 
 
         # For now we sail into the wind until the target isn't in the wind anymore.
-        result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'port' else -UPWIND_THRESHOLD)
+        if tack is None:
+            tack = 'starboard' if (wind_targ_angle < 0) else 'port'
+
+        result_heading = airmar.truWndDir + (UPWIND_THRESHOLD if tack == 'starboard' else -UPWIND_THRESHOLD)
     elif abs(wind_targ_angle) <= DOWNWIND_THRESHOLD:
         # we're sailing roughly perpendicular to the wind.
         # We can just head directly to the target and sails_rudder is smart enough to handle the sail.
@@ -89,6 +89,9 @@ def publish_tactics():
         if speed_stats.xte > leg.xte_max:  # we're out of XTE on the right
             tack = 'starboard'  # put the wind on the right of us, sailing left
             rospy.loginfo("[tactics] Jibe to starboard")
+
+        if tack is None:
+            tack = 'starboard' if (wind_targ_angle < 0) else 'port'
 
         # the result will be sailing downwind until we get close enough that the target isn't directly in the
         # wind, then we turn around into the target
@@ -122,9 +125,13 @@ def speed_stats_callback(data):
 
 
 def leg_info_callback(data):
-    rospy.loginfo("[tactics] leg_info_callback()")
-    global leg
+    global tack, leg
     leg = data
+
+    # We have to reset the tack when we start doing a new leg
+    wind_head = compass_diff(gpsBearing(airmar.lat, airmar.long, leg.end_lat, leg.end_long), airmar.truWndDir)
+    tack = 'starboard' if wind_head < 0 else 'port'
+    rospy.loginfo("[tactics] Relative wind heading is %d; tacking to %s" % (wind_head, tack))
 
 
 def listen():

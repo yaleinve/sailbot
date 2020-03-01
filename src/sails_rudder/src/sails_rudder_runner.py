@@ -301,7 +301,6 @@ class SailsRudder():
             newJibPos = -self.minClosedAngle if newJibPos < 0 else self.minClosedAngle
 
         # The jibing maneuver overrides other sail controls because we must pull in the sails for it to work.
-        rospy.loginfo("[sails-rudder] Angle to wind: " + str(normalizeAngle(self.targetHeading - self.trueWindDirection)))
         if abs(normalizeAngle(self.boatHeading - self.trueWindDirection)) > self.runningAngle:
             rospy.loginfo("[sails-rudder] Jibing - pulling jib and main in!")
             newMainPos = 0
